@@ -2,7 +2,7 @@
 #include <pybind11/stl.h>
 #include <pybind11/operators.h>
 #include <pybind11/numpy.h>
-#include "tensor.hpp"
+#include "cvmml/core/tensor.hpp"
 
 namespace py = pybind11;
 using namespace cvmml::core;
@@ -56,7 +56,7 @@ PYBIND11_MODULE(cvmml_api, m)
 		.def("mm", &Tensor::matmult)
 		.def("__matmul__", &Tensor::matmult)
 
-		.def("T", &Tensor::transpose)
+		.def("T", &Tensor::transpose, py::arg("dim0") = -2, py::arg("dim1") = -1)
 		.def_static("zeros", &Tensor::zeros, py::arg("shape"))
 		.def_static("ones", &Tensor::ones, py::arg("shape"))
 		.def_static("randn", &Tensor::randn, py::arg("shape"), py::arg("mean")=0.0f, py::arg("std")=1.0f)
@@ -82,10 +82,10 @@ PYBIND11_MODULE(cvmml_api, m)
 				t.shape(),
 				numpy_strides
 			);
-		});
+		})
 
 		.def("device", &Tensor::device)
 		.def("to_cuda", &Tensor::to_cuda)
-		.def("to_cpu", &Tensor::to_cpu)
+		.def("to_cpu", &Tensor::to_cpu);
 
 }

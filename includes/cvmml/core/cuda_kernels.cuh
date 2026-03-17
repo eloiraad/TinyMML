@@ -22,20 +22,18 @@ namespace cvmml {
 			void mul_scalar(const float *a, float scalar, float *out, int size);
 			void div_scalar(const float *a, float scalar, float *out, int size);
 
-			
-// Backward kernels & Utils
-void add_mul_arrays(float* grad, const float* grad_y, const float* val, int size);
-void add_div_arrays(float* grad, const float* grad_y, const float* val, int size);
-void sub_mul_div_sqr_arrays(float* grad_b, const float* grad_y, const float* val_a, const float* val_b, int size);
+			void add_mul_arrays(float* grad, const float* grad_y, const float* val, int size);
+			void add_div_arrays(float* grad, const float* grad_y, const float* val, int size);
+			void sub_mul_div_sqr_arrays(float* grad_b, const float* grad_y, const float* val_a, const float* val_b, int size);
 
-void add_mul_scalar_arrays(float* grad, const float* grad_y, float val, int size);
-void add_div_scalar_arrays(float* grad, const float* grad_y, float val, int size);
+			void add_mul_scalar_arrays(float* grad, const float* grad_y, float val, int size);
+			void add_div_scalar_arrays(float* grad, const float* grad_y, float val, int size);
 
-void transpose_matrix(const float* src, float* dst, int M, int N);
-void add_transpose_matrix(const float* grad_y, float* grad_x, int M, int N);
+			void transpose_matrix(const float* src, float* dst, int M, int N);
+			void add_transpose_matrix(const float* grad_y, float* grad_x, int M, int N);
 
-void matmult_backward_A(const float* grad_C, const float* B, float* grad_A, int M, int K, int N);
-void matmult_backward_B(const float* A, const float* grad_C, float* grad_B, int M, int K, int N);
+			void matmult_backward_A(const float* grad_C, const float* B, float* grad_A, int M, int K, int N);
+			void matmult_backward_B(const float* A, const float* grad_C, float* grad_B, int M, int K, int N);
 
 			void matmul(const float *a, const float *b, float *out, int M, int K, int N);
 

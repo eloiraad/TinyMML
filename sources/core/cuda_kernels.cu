@@ -1,4 +1,4 @@
-#include "cuda_kernels.cuh"
+#include "cvmml/core/cuda_kernels.cuh"
 #include <cuda_runtime.h>
 #include <stdexcept>
 #include <string>
@@ -197,123 +197,150 @@ namespace cvmml {
 				cudaDeviceSynchronize();
 			}
 
-		
-__global__ void add_mul_arrays_kernel(float* grad, const float* grad_y, const float* val, int size) {
-int idx = blockIdx.x * blockDim.x + threadIdx.x;
-if (idx < size) grad[idx] += grad_y[idx] * val[idx];
-}
-void add_mul_arrays(float* grad, const float* grad_y, const float* val, int size) {
-dim3 blockSize, gridSize; get_grid_1d(size, blockSize, gridSize);
-add_mul_arrays_kernel<<<gridSize, blockSize>>>(grad, grad_y, val, size);
-cudaDeviceSynchronize();
-}
+			__global__ void add_mul_arrays_kernel(float* grad, const float* grad_y, const float* val, int size)
+			{
+				int idx = blockIdx.x * blockDim.x + threadIdx.x;
+				if (idx < size)
+					grad[idx] += grad_y[idx] * val[idx];
+			}
 
-__global__ void add_div_arrays_kernel(float* grad, const float* grad_y, const float* val, int size) {
-int idx = blockIdx.x * blockDim.x + threadIdx.x;
-if (idx < size) grad[idx] += grad_y[idx] / val[idx];
-}
-void add_div_arrays(float* grad, const float* grad_y, const float* val, int size) {
-dim3 blockSize, gridSize; get_grid_1d(size, blockSize, gridSize);
-add_div_arrays_kernel<<<gridSize, blockSize>>>(grad, grad_y, val, size);
-cudaDeviceSynchronize();
-}
+			void add_mul_arrays(float* grad, const float* grad_y, const float* val, int size)
+			{
+				dim3 blockSize, gridSize; get_grid_1d(size, blockSize, gridSize);
+				add_mul_arrays_kernel<<<gridSize, blockSize>>>(grad, grad_y, val, size);
+				cudaDeviceSynchronize();
+			}
 
-__global__ void sub_mul_div_sqr_arrays_kernel(float* grad_b, const float* grad_y, const float* val_a, const float* val_b, int size) {
-int idx = blockIdx.x * blockDim.x + threadIdx.x;
-if (idx < size) grad_b[idx] -= (grad_y[idx] * val_a[idx]) / (val_b[idx] * val_b[idx]);
-}
-void sub_mul_div_sqr_arrays(float* grad_b, const float* grad_y, const float* val_a, const float* val_b, int size) {
-dim3 blockSize, gridSize; get_grid_1d(size, blockSize, gridSize);
-sub_mul_div_sqr_arrays_kernel<<<gridSize, blockSize>>>(grad_b, grad_y, val_a, val_b, size);
-cudaDeviceSynchronize();
-}
+			__global__ void add_div_arrays_kernel(float* grad, const float* grad_y, const float* val, int size)
+			{
+			int idx = blockIdx.x * blockDim.x + threadIdx.x;
+			if (idx < size)
+				grad[idx] += grad_y[idx] / val[idx];
+			}
 
-__global__ void add_mul_scalar_arrays_kernel(float* grad, const float* grad_y, float val, int size) {
-int idx = blockIdx.x * blockDim.x + threadIdx.x;
-if (idx < size) grad[idx] += grad_y[idx] * val;
-}
-void add_mul_scalar_arrays(float* grad, const float* grad_y, float val, int size) {
-dim3 blockSize, gridSize; get_grid_1d(size, blockSize, gridSize);
-add_mul_scalar_arrays_kernel<<<gridSize, blockSize>>>(grad, grad_y, val, size);
-cudaDeviceSynchronize();
-}
+			void add_div_arrays(float* grad, const float* grad_y, const float* val, int size)
+			{
+				dim3 blockSize, gridSize; get_grid_1d(size, blockSize, gridSize);
+				add_div_arrays_kernel<<<gridSize, blockSize>>>(grad, grad_y, val, size);
+				cudaDeviceSynchronize();
+			}
 
-__global__ void add_div_scalar_arrays_kernel(float* grad, const float* grad_y, float val, int size) {
-int idx = blockIdx.x * blockDim.x + threadIdx.x;
-if (idx < size) grad[idx] += grad_y[idx] / val;
-}
-void add_div_scalar_arrays(float* grad, const float* grad_y, float val, int size) {
-dim3 blockSize, gridSize; get_grid_1d(size, blockSize, gridSize);
-add_div_scalar_arrays_kernel<<<gridSize, blockSize>>>(grad, grad_y, val, size);
-cudaDeviceSynchronize();
-}
+			__global__ void sub_mul_div_sqr_arrays_kernel(float* grad_b, const float* grad_y, const float* val_a, const float* val_b, int size)
+			{
+				int idx = blockIdx.x * blockDim.x + threadIdx.x;
+				if (idx < size)
+					grad_b[idx] -= (grad_y[idx] * val_a[idx]) / (val_b[idx] * val_b[idx]);
+			}
 
-__global__ void transpose_matrix_kernel(const float* src, float* dst, int M, int N) {
-int i = blockIdx.y * blockDim.y + threadIdx.y; // row
-int j = blockIdx.x * blockDim.x + threadIdx.x; // col
-if (i < M && j < N) {
-dst[j * M + i] = src[i * N + j];
-}
-}
-void transpose_matrix(const float* src, float* dst, int M, int N) {
-dim3 blockSize(16, 16);
-dim3 gridSize((N + blockSize.x - 1) / blockSize.x, (M + blockSize.y - 1) / blockSize.y);
-transpose_matrix_kernel<<<gridSize, blockSize>>>(src, dst, M, N);
-cudaDeviceSynchronize();
-}
+			void sub_mul_div_sqr_arrays(float* grad_b, const float* grad_y, const float* val_a, const float* val_b, int size)
+			{
+				dim3 blockSize, gridSize; get_grid_1d(size, blockSize, gridSize);
+				sub_mul_div_sqr_arrays_kernel<<<gridSize, blockSize>>>(grad_b, grad_y, val_a, val_b, size);
+				cudaDeviceSynchronize();
+			}
 
-__global__ void add_transpose_matrix_kernel(const float* grad_y, float* grad_x, int M, int N) {
-int i = blockIdx.y * blockDim.y + threadIdx.y; // row of x
-int j = blockIdx.x * blockDim.x + threadIdx.x; // col of x
-if (i < M && j < N) {
-grad_x[i * N + j] += grad_y[j * M + i];
-}
-}
-void add_transpose_matrix(const float* grad_y, float* grad_x, int M, int N) {
-dim3 blockSize(16, 16);
-dim3 gridSize((N + blockSize.x - 1) / blockSize.x, (M + blockSize.y - 1) / blockSize.y);
-add_transpose_matrix_kernel<<<gridSize, blockSize>>>(grad_y, grad_x, M, N);
-cudaDeviceSynchronize();
-}
+			__global__ void add_mul_scalar_arrays_kernel(float* grad, const float* grad_y, float val, int size)
+			{
+				int idx = blockIdx.x * blockDim.x + threadIdx.x;
+				if (idx < size)
+					grad[idx] += grad_y[idx] * val;
+			}
 
-__global__ void matmult_backward_A_kernel(const float* grad_C, const float* B, float* grad_A, int M, int K, int N) {
-int m = blockIdx.y * blockDim.y + threadIdx.y;
-int k = blockIdx.x * blockDim.x + threadIdx.x;
-if (m < M && k < K) {
-float sum = 0.0f;
-for (int n = 0; n < N; ++n) {
-// grad_C is M x N. B is K x N (wait, B is K x N or B^T ?)
-// Original: sum += grad_C(m, n) * B(k, n)
-sum += grad_C[m * N + n] * B[k * N + n];
-}
-grad_A[m * K + k] += sum;
-}
-}
-void matmult_backward_A(const float* grad_C, const float* B, float* grad_A, int M, int K, int N) {
-dim3 blockSize(16, 16);
-dim3 gridSize((K + blockSize.x - 1) / blockSize.x, (M + blockSize.y - 1) / blockSize.y);
-matmult_backward_A_kernel<<<gridSize, blockSize>>>(grad_C, B, grad_A, M, K, N);
-cudaDeviceSynchronize();
-}
+			void add_mul_scalar_arrays(float* grad, const float* grad_y, float val, int size)
+			{
+				dim3 blockSize, gridSize; get_grid_1d(size, blockSize, gridSize);
+				add_mul_scalar_arrays_kernel<<<gridSize, blockSize>>>(grad, grad_y, val, size);
+				cudaDeviceSynchronize();
+			}
 
-__global__ void matmult_backward_B_kernel(const float* A, const float* grad_C, float* grad_B, int M, int K, int N) {
-int k = blockIdx.y * blockDim.y + threadIdx.y;
-int n = blockIdx.x * blockDim.x + threadIdx.x;
-if (k < K && n < N) {
-float sum = 0.0f;
-for (int m = 0; m < M; ++m) {
-// A^T * grad_C means sum over M: A(m, k) * grad_C(m, n)
-sum += A[m * K + k] * grad_C[m * N + n];
-}
-grad_B[k * N + n] += sum;
-}
-}
-void matmult_backward_B(const float* A, const float* grad_C, float* grad_B, int M, int K, int N) {
-dim3 blockSize(16, 16);
-dim3 gridSize((N + blockSize.x - 1) / blockSize.x, (K + blockSize.y - 1) / blockSize.y);
-matmult_backward_B_kernel<<<gridSize, blockSize>>>(A, grad_C, grad_B, M, K, N);
-cudaDeviceSynchronize();
-}
-	} // namespace cuda
+			__global__ void add_div_scalar_arrays_kernel(float* grad, const float* grad_y, float val, int size)
+			{
+				int idx = blockIdx.x * blockDim.x + threadIdx.x;
+				if (idx < size)
+					grad[idx] += grad_y[idx] / val;
+			}
+
+			void add_div_scalar_arrays(float* grad, const float* grad_y, float val, int size)
+			{
+				dim3 blockSize, gridSize; get_grid_1d(size, blockSize, gridSize);
+				add_div_scalar_arrays_kernel<<<gridSize, blockSize>>>(grad, grad_y, val, size);
+				cudaDeviceSynchronize();
+			}
+
+			__global__ void transpose_matrix_kernel(const float* src, float* dst, int M, int N)
+			{
+				int i = blockIdx.y * blockDim.y + threadIdx.y;
+				int j = blockIdx.x * blockDim.x + threadIdx.x;
+				if (i < M && j < N)
+					dst[j * M + i] = src[i * N + j];
+			}
+
+			void transpose_matrix(const float* src, float* dst, int M, int N)
+			{
+				dim3 blockSize(16, 16);
+				dim3 gridSize((N + blockSize.x - 1) / blockSize.x, (M + blockSize.y - 1) / blockSize.y);
+				transpose_matrix_kernel<<<gridSize, blockSize>>>(src, dst, M, N);
+				cudaDeviceSynchronize();
+			}
+
+			__global__ void add_transpose_matrix_kernel(const float* grad_y, float* grad_x, int M, int N)
+			{
+				int i = blockIdx.y * blockDim.y + threadIdx.y;
+				int j = blockIdx.x * blockDim.x + threadIdx.x;
+				if (i < M && j < N)
+					grad_x[i * N + j] += grad_y[j * M + i];
+			}
+
+			void add_transpose_matrix(const float* grad_y, float* grad_x, int M, int N)
+			{
+				dim3 blockSize(16, 16);
+				dim3 gridSize((N + blockSize.x - 1) / blockSize.x, (M + blockSize.y - 1) / blockSize.y);
+				add_transpose_matrix_kernel<<<gridSize, blockSize>>>(grad_y, grad_x, M, N);
+				cudaDeviceSynchronize();
+			}
+
+			__global__ void matmult_backward_A_kernel(const float* grad_C, const float* B, float* grad_A, int M, int K, int N)
+			{
+				int m = blockIdx.y * blockDim.y + threadIdx.y;
+				int k = blockIdx.x * blockDim.x + threadIdx.x;
+				if (m < M && k < K)
+				{
+					float sum = 0.0f;
+					for (int n = 0; n < N; ++n)
+						sum += grad_C[m * N + n] * B[k * N + n]; // dA = dC * B^T
+					grad_A[m * K + k] += sum;
+				}
+			}
+
+			void matmult_backward_A(const float* grad_C, const float* B, float* grad_A, int M, int K, int N)
+			{
+				dim3 blockSize(16, 16);
+				dim3 gridSize((K + blockSize.x - 1) / blockSize.x, (M + blockSize.y - 1) / blockSize.y);
+				matmult_backward_A_kernel<<<gridSize, blockSize>>>(grad_C, B, grad_A, M, K, N);
+				cudaDeviceSynchronize();
+			}
+
+			__global__ void matmult_backward_B_kernel(const float* A, const float* grad_C, float* grad_B, int M, int K, int N)
+			{
+				int k = blockIdx.y * blockDim.y + threadIdx.y;
+				int n = blockIdx.x * blockDim.x + threadIdx.x;
+				if (k < K && n < N)
+				{
+					float sum = 0.0f;
+					for (int m = 0; m < M; ++m)
+						sum += A[m * K + k] * grad_C[m * N + n]; // dB = A^T * dC
+					grad_B[k * N + n] += sum;
+				}
+			}
+
+			void matmult_backward_B(const float* A, const float* grad_C, float* grad_B, int M, int K, int N)
+			{
+				dim3 blockSize(16, 16);
+				dim3 gridSize((N + blockSize.x - 1) / blockSize.x, (K + blockSize.y - 1) / blockSize.y);
+				matmult_backward_B_kernel<<<gridSize, blockSize>>>(A, grad_C, grad_B, M, K, N);
+				cudaDeviceSynchronize();
+			}
+
+		} // namespace cuda
 	} // namespace core
 } // namespace cvmml

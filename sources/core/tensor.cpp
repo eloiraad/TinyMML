@@ -1,5 +1,5 @@
-#include "tensor.hpp"
-#include "cuda_kernels.cuh"
+#include "cvmml/core/tensor.hpp"
+#include "cvmml/core/cuda_kernels.cuh"
 #include <atomic>
 
 namespace cvmml {
@@ -141,6 +141,8 @@ namespace cvmml {
 				for ( int i = 0; i < this->total_size_; i++ )
 					result.data()[i] = this->data()[i] + rhs.data()[i];
 
+			result.set_requires_grad(this->requires_grad_ || rhs.requires_grad_);
+
 			if ( result.requires_grad_ )
 			{
 				Tensor parentA = *this;
@@ -181,6 +183,8 @@ namespace cvmml {
 			else
 				for ( int i = 0; i < this->total_size_; i++ )
 					result.data()[i] = this->data()[i] - rhs.data()[i];
+
+			result.set_requires_grad(this->requires_grad_ || rhs.requires_grad_);
 
 			if ( result.requires_grad_ )
 			{
@@ -223,6 +227,8 @@ namespace cvmml {
 				for ( int i = 0; i < this->total_size_; i++ )
 					result.data()[i] = this->data()[i] * rhs.data()[i];
 
+			result.set_requires_grad(this->requires_grad_ || rhs.requires_grad_);
+
 			if ( result.requires_grad_ )
 			{
 				Tensor parentA = *this;
@@ -230,12 +236,20 @@ namespace cvmml {
 				result.parents_ = {parentA, parentB};
 				result.backward_fn_ = [parentA, parentB, result]() mutable
 				{
-					if ( parentA.requires_grad_ )
-						for ( int i = 0; i < parentA.size(); i++ )
-							parentA.grad()[i] += result.grad()[i] * parentB.data()[i];
-					if ( parentB.requires_grad_ )
-						for ( int i = 0; i < parentB.size(); i++ )
-							parentB.grad()[i] += result.grad()[i] * parentA.data()[i];
+					if ( parentA.requires_grad_ ) {
+						if (parentA.device() == Device::CUDA)
+							cuda::add_mul_arrays(parentA.device_grad(), result.device_grad(), parentB.device_data(), parentA.size());
+						else
+							for ( int i = 0; i < parentA.size(); i++ )
+								parentA.grad()[i] += result.grad()[i] * parentB.data()[i];
+					}
+					if ( parentB.requires_grad_ ) {
+						if (parentB.device() == Device::CUDA)
+							cuda::add_mul_arrays(parentB.device_grad(), result.device_grad(), parentA.device_data(), parentB.size());
+						else
+							for ( int i = 0; i < parentB.size(); i++ )
+								parentB.grad()[i] += result.grad()[i] * parentA.data()[i];
+					}
 				};
 			}
 			return result;
@@ -255,6 +269,8 @@ namespace cvmml {
 			else
 				for ( int i = 0; i < this->total_size_; i++ )
 					result.data()[i] = this->data()[i] / rhs.data()[i];
+
+			result.set_requires_grad(this->requires_grad_ || rhs.requires_grad_);
 
 			if ( result.requires_grad_ )
 			{
@@ -300,9 +316,13 @@ namespace cvmml {
 				result.parents_ = {parentA};
 				result.backward_fn_ = [parentA, result]() mutable
 				{
-					if ( parentA.requires_grad_ )
-						for ( int i = 0; i < parentA.size(); i++ )
-							parentA.grad()[i] += result.grad()[i];
+					if ( parentA.requires_grad_ ) {
+						if (parentA.device() == Device::CUDA)
+							cuda::add_arrays(parentA.device_grad(), result.device_grad(), parentA.device_grad(), parentA.size());
+						else
+							for ( int i = 0; i < parentA.size(); i++ )
+								parentA.grad()[i] += result.grad()[i];
+					}
 				};
 			}
 			return result;
@@ -326,9 +346,13 @@ namespace cvmml {
 				result.parents_ = {parentA};
 				result.backward_fn_ = [parentA, result]() mutable
 				{
-					if ( parentA.requires_grad_ )
-						for ( int i = 0; i < parentA.size(); i++ )
-							parentA.grad()[i] += result.grad()[i];
+					if ( parentA.requires_grad_ ) {
+						if (parentA.device() == Device::CUDA)
+							cuda::add_arrays(parentA.device_grad(), result.device_grad(), parentA.device_grad(), parentA.size());
+						else
+							for ( int i = 0; i < parentA.size(); i++ )
+								parentA.grad()[i] += result.grad()[i];
+					}
 				};
 			}
 			return result;
@@ -475,17 +499,36 @@ namespace cvmml {
 			return result;
 		}
 
-		Tensor Tensor::transpose(int dim0 = -2, int dim1 = -1) const
+		Tensor Tensor::transpose(int dim0, int dim1) const
 		{
 			if ( shape_.size() != 2 )
 				throw std::invalid_argument("Transpose only supports 2D tensors for now.");
+
+			int rank = static_cast<int>(shape_.size());
+			if ( dim0 < 0 )
+				dim0 += rank;
+			if ( dim1 < 0 )
+				dim1 += rank;
+			if ( dim0 < 0 || dim0 >= rank || dim1 < 0 || dim1 >= rank || dim0 == dim1 )
+				throw std::invalid_argument("Invalid transpose dimensions.");
+			if ( !((dim0 == 0 && dim1 == 1) || (dim0 == 1 && dim1 == 0)) )
+				throw std::invalid_argument("For 2D tensors, transpose only supports dim pairs (0,1), (1,0), (-2,-1), (-1,-2).");
+
 			int M = shape_[0];
 			int N = shape_[1];
 			Tensor tr({N, M});
 			
-			for ( int i = 0; i < M; i++ )
-				for ( int j = 0; j < N; j++ )
-					tr({j, i}) = (*this)({i, j});
+			if ( this->device_ == Device::CUDA )
+			{
+				tr = tr.to_cuda();
+				cuda::transpose_matrix(this->device_data(), tr.device_data(), M, N);
+			}
+			else
+			{
+				for ( int i = 0; i < M; i++ )
+					for ( int j = 0; j < N; j++ )
+						tr({j, i}) = (*this)({i, j});
+			}
 					
 			tr.set_requires_grad(this->requires_grad_);
 			
@@ -497,9 +540,14 @@ namespace cvmml {
 				{
 					if ( parent.requires_grad_ )
 					{
-						for ( int i = 0; i < M; i++ )
-							for ( int j = 0; j < N; j++ )
-								parent.grad()[i * N + j] += tr.grad()[j * M + i];
+						if ( parent.device() == Device::CUDA )
+							cuda::add_transpose_matrix(tr.device_grad(), parent.device_grad(), M, N);
+						else
+						{
+							for ( int i = 0; i < M; i++ )
+								for ( int j = 0; j < N; j++ )
+									parent.grad()[i * N + j] += tr.grad()[j * M + i];
+						}
 					}
 				};
 			}
@@ -518,9 +566,10 @@ namespace cvmml {
 				grad_ = std::shared_ptr<float[]>(new float[total_size_]());
 			if ( val && device_ == Device::CUDA && !device_grad_ )
 			{
-				device_grad_ = std::shared_ptr<float[]>(cuda::allocate_memory(total_size_), [](float* ptr) {
-					cuda::free_memory(ptr);
-				});
+				device_grad_ = std::shared_ptr<float[]>(
+					cuda::allocate_memory(total_size_),
+					[](float* ptr) {cuda::free_memory(ptr);}
+				);
 				cuda::set_memory(device_grad_.get(), 0.0f, total_size_);
 			}
 		}

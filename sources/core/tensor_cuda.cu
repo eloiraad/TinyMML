@@ -1,14 +1,13 @@
-#include "tensor.hpp"
+#include "cvmml/core/tensor.hpp"
 #include <stdexcept>
 #include <cuda_runtime.h>
 
 #ifndef CHECK_CUDA
-#define CHECK_CUDA(call)
-	do {
-		cudaError_t err = call;
-		if ( err != cudaSuccess )
-			throw std::runtime_error(std::string("CUDA error: ") + cudaGetErrorString(err));
-	} while (0)
+#define CHECK_CUDA(call) { \
+	cudaError_t err = call; \
+	if ( err != cudaSuccess ) \
+		throw std::runtime_error(std::string("CUDA error: ") + cudaGetErrorString(err)); \
+}
 #endif
 
 namespace cvmml {
@@ -34,7 +33,7 @@ namespace cvmml {
 			size_t bytes = total_size_ * sizeof(float);
 			CHECK_CUDA(cudaMalloc(&d_ptr, bytes));
 			CHECK_CUDA(cudaMemcpy(d_ptr, this->data_.get(), bytes, cudaMemcpyHostToDevice));
-			result.device_data_ = std::shared_ptr<float>(d_ptr, [](float* ptr)
+			result.device_data_ = std::shared_ptr<float[]>(d_ptr, [](float* ptr)
 			{
 				cudaFree(ptr);
 			});
@@ -52,6 +51,7 @@ namespace cvmml {
 			size_t bytes = total_size_ * sizeof(float);
 			CHECK_CUDA(cudaMemcpy(result.data_.get(), this->device_data_.get(), bytes, cudaMemcpyDeviceToHost));
 			result.device_data_.reset();
+			result.device_grad_.reset();
 			return result;
 		}
 
