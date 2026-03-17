@@ -43,11 +43,11 @@ Ce document trace la progression séquentielle du projet. Chaque étape doit êt
 **Objectif :** Déporter les calculs lourds sur le GPU.
 
 *   **3.1 : Gestion Mémoire Device**
-    *   [ ] Allocation VRAM et transferts Host <-> Device.
+    *   [x] Allocation VRAM et transferts Host <-> Device.
 *   **3.2 : Kernels de Calcul**
-    *   [ ] Implémentation CUDA pour les opérations de base et GEMM (`.cu` dans `sources/core`).
+    *   [x] Implémentation CUDA pour les opérations de base et GEMM (`.cu` dans `sources/core`).
 *   **3.3 : Intégration API**
-    *   [ ] Méthodes `.to_cuda()` et `.to_cpu()` exposées en Python.
+    *   [x] Méthodes `.to_cuda()` et `.to_cpu()` exposées en Python.
 
 ---
 

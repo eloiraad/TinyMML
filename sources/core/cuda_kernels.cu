@@ -299,6 +299,41 @@ namespace cvmml {
 				cudaDeviceSynchronize();
 			}
 
+			__global__ void pack_strided_to_contiguous_kernel(const float* src, float* dst, const int* shape, const int* strides, int ndim, int offset, int total_size)
+			{
+				int linear = blockIdx.x * blockDim.x + threadIdx.x;
+				if (linear >= total_size)
+					return;
+
+				int rem = linear;
+				int source_index = offset;
+				for (int d = ndim - 1; d >= 0; --d)
+				{
+					int coord = rem % shape[d];
+					rem /= shape[d];
+					source_index += coord * strides[d];
+				}
+				dst[linear] = src[source_index];
+			}
+
+			void pack_strided_to_contiguous(const float* src, float* dst, const int* shape, const int* strides, int ndim, int offset, int total_size)
+			{
+				int* d_shape = nullptr;
+				int* d_strides = nullptr;
+				cudaMalloc(&d_shape, ndim * sizeof(int));
+				cudaMalloc(&d_strides, ndim * sizeof(int));
+				cudaMemcpy(d_shape, shape, ndim * sizeof(int), cudaMemcpyHostToDevice);
+				cudaMemcpy(d_strides, strides, ndim * sizeof(int), cudaMemcpyHostToDevice);
+
+				dim3 blockSize, gridSize;
+				get_grid_1d(total_size, blockSize, gridSize);
+				pack_strided_to_contiguous_kernel<<<gridSize, blockSize>>>(src, dst, d_shape, d_strides, ndim, offset, total_size);
+				cudaDeviceSynchronize();
+
+				cudaFree(d_shape);
+				cudaFree(d_strides);
+			}
+
 			__global__ void matmult_backward_A_kernel(const float* grad_C, const float* B, float* grad_A, int M, int K, int N)
 			{
 				int m = blockIdx.y * blockDim.y + threadIdx.y;

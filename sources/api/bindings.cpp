@@ -22,6 +22,10 @@ PYBIND11_MODULE(cvmml_api, m)
 		.def("shape", &Tensor::shape)
 		.def("strides", &Tensor::strides)
 		.def("size", &Tensor::size)
+		.def("is_view", &Tensor::is_view)
+		.def("is_contiguous", &Tensor::is_contiguous)
+		.def("contiguous", &Tensor::contiguous)
+		.def("view", &Tensor::view, py::arg("new_shape"))
 
 		.def("requires_grad", &Tensor::requires_grad)
 		.def("set_requires_grad", &Tensor::set_requires_grad, py::arg("val"))
@@ -29,7 +33,8 @@ PYBIND11_MODULE(cvmml_api, m)
 		.def("backward", &Tensor::backward)
 		.def("grad", [](const Tensor& t) -> py::object
 		{
-			if ( !t.grad() ) return py::none();
+			if ( !t.grad() )
+				return py::none();
 			std::vector<py::ssize_t> numpy_strides(t.strides().size());
 			for ( size_t i = 0; i < t.strides().size(); ++i )
 				numpy_strides[i] = t.strides()[i] * sizeof(float);

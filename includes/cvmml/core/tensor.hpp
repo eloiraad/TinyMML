@@ -22,6 +22,8 @@ namespace cvmml {
 		private:
 			std::vector<int> shape_;
 			std::vector<int> strides_;
+			int offset_ = 0;
+			bool is_view_ = false;
 			std::shared_ptr<float[]> data_;
 
 			Device device_ = Device::CPU;
@@ -42,6 +44,10 @@ namespace cvmml {
 
 			const std::vector<int>& shape() const;
 			const std::vector<int>& strides() const;
+			bool is_view() const;
+			bool is_contiguous() const;
+			Tensor contiguous() const;
+			Tensor view( const std::vector<int>& new_shape ) const;
 			float* data() const;
 			int size() const;
 			uint64_t id() const;

@@ -34,6 +34,7 @@ namespace cvmml {
 
 			void matmult_backward_A(const float* grad_C, const float* B, float* grad_A, int M, int K, int N);
 			void matmult_backward_B(const float* A, const float* grad_C, float* grad_B, int M, int K, int N);
+			void pack_strided_to_contiguous(const float* src, float* dst, const int* shape, const int* strides, int ndim, int offset, int total_size);
 
 			void matmul(const float *a, const float *b, float *out, int M, int K, int N);
 
