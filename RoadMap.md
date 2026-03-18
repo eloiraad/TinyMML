@@ -57,16 +57,41 @@ Ce document trace la progression séquentielle du projet. Chaque étape doit êt
 
 ### Phase 4 : Neural Network Framework (`nn`)
 
-**Objectif :** Construire des modèles de Deep Learning.
+**Objectif :** Construire des modèles de Deep Learning avec une API haut niveau type Keras.
 
-*   **4.1 : Architecture Layers**
-    *   [ ] Classe de base `Layer`, `Linear`, `Conv2D`.
-*   **4.2 : Activations & Pertes**
-    *   [ ] `ReLU`, `Softmax`, `CrossEntropy`.
-*   **4.3 : Optimiseurs**
-    *   [ ] `SGD`, `Adam` (optionnel au début).
-*   **4.4 : Application MNIST**
-    *   [ ] Entraînement complet d'un MLP sur MNIST en Python.
+*   **4.0 : Prérequis Tensor (bloquant)**
+    *   [x] Ajouter les ops nécessaires: `exp`, `log`, `sum(axis, keepdim)`, `max(axis, keepdim)`, `min(axis, keepdim)`, broadcast fiable.
+    *   [x] Vérifier l’autograd de ces ops (CPU/CUDA).
+
+*   **4.1 : Abstractions de base**
+    *   [ ] Classe abstraite `Layer` (`forward`, `parameters`, `train`, `eval`).
+    *   [ ] Classe `Model` avec liste de `Layer`, `forward`, `__call__`, `parameters`.
+    *   [ ] Build du modèle: `input_shape` explicite **ou** inférence au premier batch.
+
+*   **4.2 : Layers**
+    *   [ ] `Linear` (poids, biais, init Xavier/He simple).
+    *   [ ] `ReLU`.
+    *   [ ] `Softmax` (version stable numériquement).
+    *   [ ] `Conv2D` (MVP: stride=1, padding=0, dilation=1, groups=1).
+    *   [ ] `BatchNorm` & `LayerNorm`
+
+*   **4.3 : Losses**
+    *   [ ] `CrossEntropyLoss` (fusion Softmax + NLL recommandée pour stabilité).
+    *   [ ] Interface `LossFunction` générique.
+
+*   **4.4 : Optimizers**
+    *   [ ] `SGD` (lr, weight decay optionnel).
+    *   [ ] `Adam` (beta1, beta2, eps).
+
+*   **4.5 : Entraînement & Évaluation**
+    *   [ ] `model.train(...)` (epochs, batch_size, shuffle, lr).
+    *   [ ] `model.evaluate(...)` (loss moyenne, accuracy).
+    *   [ ] Affichage de la loss par epoch.
+    *   [ ] Matrice de confusion (TP/TN/FP/FN + multi-classes).
+
+*   **4.6 : Validation**
+    *   [ ] Pipeline complet sur MNIST (Linear + ReLU + Softmax + CrossEntropy).
+    *   [ ] Test de non-régression CPU/CUDA.
 
 ---
 
@@ -80,3 +105,12 @@ Ce document trace la progression séquentielle du projet. Chaque étape doit êt
     *   [ ] Entraînement sur CIFAR-10.
 *   **5.3 : Pipeline Génératif**
     *   [ ] Super-résolution ou modèles de diffusion simplifiés.
+
+---
+
+### Notes de structure (refactor global)
+
+*   [x] Split `sources/core/tensor.cpp` en modules `tensor/` par responsabilité.
+*   [x] Split `sources/core/cuda_kernels.cu` en modules `cuda/` par responsabilité.
+*   [x] Conserver API publique `Tensor` stable tout en ajoutant `min`.
+*   [x] Reporter explicitement le multithreading CPU (décision produit) en attente de profiling.

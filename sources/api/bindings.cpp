@@ -2,7 +2,7 @@
 #include <pybind11/stl.h>
 #include <pybind11/operators.h>
 #include <pybind11/numpy.h>
-#include "cvmml/core/tensor.hpp"
+#include "core/tensor.hpp"
 
 namespace py = pybind11;
 using namespace cvmml::core;
@@ -57,6 +57,11 @@ PYBIND11_MODULE(cvmml_api, m)
 		.def(py::self - float())
 		.def(py::self * float())
 		.def(py::self / float())
+		.def("exp", &Tensor::exp)
+		.def("log", &Tensor::log)
+		.def("sum", &Tensor::sum, py::arg("axes") = std::vector<int>{}, py::arg("keepdim") = false)
+		.def("max", &Tensor::max, py::arg("axes") = std::vector<int>{}, py::arg("keepdim") = false)
+		.def("min", &Tensor::min, py::arg("axes") = std::vector<int>{}, py::arg("keepdim") = false)
 
 		.def("mm", &Tensor::matmult)
 		.def("__matmul__", &Tensor::matmult)
