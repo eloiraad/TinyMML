@@ -49,6 +49,10 @@ Ce document trace la progression séquentielle du projet. Chaque étape doit êt
 *   **3.3 : Intégration API**
     *   [x] Méthodes `.to_cuda()` et `.to_cpu()` exposées en Python.
 
+- Enlever synchro systematique
+- Ajouter multithreading cpu
+- revoir transposition ?
+
 ---
 
 ### Phase 4 : Neural Network Framework (`nn`)

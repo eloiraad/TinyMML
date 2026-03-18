@@ -267,36 +267,53 @@ namespace cvmml {
 				cudaDeviceSynchronize();
 			}
 
-			__global__ void transpose_matrix_kernel(const float* src, float* dst, int M, int N)
+			__global__ void add_transpose_nd_kernel(const float* grad_y, float* grad_x, const int* parent_shape, int ndim, int dim0, int dim1, int total_size)
 			{
-				int i = blockIdx.y * blockDim.y + threadIdx.y;
-				int j = blockIdx.x * blockDim.x + threadIdx.x;
-				if (i < M && j < N)
-					dst[j * M + i] = src[i * N + j];
+				int linear_parent = blockIdx.x * blockDim.x + threadIdx.x;
+				if ( linear_parent >= total_size )
+					return;
+
+				int coords[8];
+				int rem = linear_parent;
+				for ( int d = ndim - 1; d >= 0; --d )
+				{
+					coords[d] = rem % parent_shape[d];
+					rem /= parent_shape[d];
+				}
+
+				int tmp = coords[dim0];
+				coords[dim0] = coords[dim1];
+				coords[dim1] = tmp;
+
+				int y_shape[8];
+				for ( int d = 0; d < ndim; ++d )
+					y_shape[d] = parent_shape[d];
+				tmp = y_shape[dim0];
+				y_shape[dim0] = y_shape[dim1];
+				y_shape[dim1] = tmp;
+
+				int linear_y = 0;
+				for ( int d = 0; d < ndim; ++d )
+					linear_y = linear_y * y_shape[d] + coords[d];
+
+				grad_x[linear_parent] += grad_y[linear_y];
 			}
 
-			void transpose_matrix(const float* src, float* dst, int M, int N)
+			void add_transpose_nd(const float* grad_y, float* grad_x, const int* parent_shape, int ndim, int dim0, int dim1, int total_size)
 			{
-				dim3 blockSize(16, 16);
-				dim3 gridSize((N + blockSize.x - 1) / blockSize.x, (M + blockSize.y - 1) / blockSize.y);
-				transpose_matrix_kernel<<<gridSize, blockSize>>>(src, dst, M, N);
+				if ( ndim > 8 )
+					throw std::invalid_argument("add_transpose_nd currently supports up to 8 dimensions.");
+
+				int* d_shape = nullptr;
+				cudaMalloc(&d_shape, ndim * sizeof(int));
+				cudaMemcpy(d_shape, parent_shape, ndim * sizeof(int), cudaMemcpyHostToDevice);
+
+				dim3 blockSize, gridSize;
+				get_grid_1d(total_size, blockSize, gridSize);
+				add_transpose_nd_kernel<<<gridSize, blockSize>>>(grad_y, grad_x, d_shape, ndim, dim0, dim1, total_size);
 				cudaDeviceSynchronize();
-			}
 
-			__global__ void add_transpose_matrix_kernel(const float* grad_y, float* grad_x, int M, int N)
-			{
-				int i = blockIdx.y * blockDim.y + threadIdx.y;
-				int j = blockIdx.x * blockDim.x + threadIdx.x;
-				if (i < M && j < N)
-					grad_x[i * N + j] += grad_y[j * M + i];
-			}
-
-			void add_transpose_matrix(const float* grad_y, float* grad_x, int M, int N)
-			{
-				dim3 blockSize(16, 16);
-				dim3 gridSize((N + blockSize.x - 1) / blockSize.x, (M + blockSize.y - 1) / blockSize.y);
-				add_transpose_matrix_kernel<<<gridSize, blockSize>>>(grad_y, grad_x, M, N);
-				cudaDeviceSynchronize();
+				cudaFree(d_shape);
 			}
 
 			__global__ void pack_strided_to_contiguous_kernel(const float* src, float* dst, const int* shape, const int* strides, int ndim, int offset, int total_size)

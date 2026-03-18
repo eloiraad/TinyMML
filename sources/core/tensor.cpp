@@ -210,6 +210,10 @@ namespace cvmml {
 			out.shape_ = resolved_shape;
 			out.strides_ = make_contiguous_strides(resolved_shape);
 			out.is_view_ = true;
+			out.grad_.reset();
+			out.device_grad_.reset();
+			out.parents_.clear();
+			out.backward_fn_ = std::function<void()>();
 			return out;
 		}
 
@@ -777,51 +781,52 @@ namespace cvmml {
 
 		Tensor Tensor::transpose(int dim0, int dim1) const
 		{
-			if ( shape_.size() != 2 )
-				throw std::invalid_argument("Transpose only supports 2D tensors for now.");
-
 			int rank = static_cast<int>(shape_.size());
+			if ( rank < 2 )
+				throw std::invalid_argument("transpose requires tensors with at least 2 dimensions.");
 			if ( dim0 < 0 )
 				dim0 += rank;
 			if ( dim1 < 0 )
 				dim1 += rank;
 			if ( dim0 < 0 || dim0 >= rank || dim1 < 0 || dim1 >= rank || dim0 == dim1 )
 				throw std::invalid_argument("Invalid transpose dimensions.");
-			if ( !((dim0 == 0 && dim1 == 1) || (dim0 == 1 && dim1 == 0)) )
-				throw std::invalid_argument("For 2D tensors, transpose only supports dim pairs (0,1), (1,0), (-2,-1), (-1,-2).");
 
-			int M = shape_[0];
-			int N = shape_[1];
 			Tensor tr = *this;
 			std::swap(tr.shape_[dim0], tr.shape_[dim1]);
 			std::swap(tr.strides_[dim0], tr.strides_[dim1]);
 			tr.is_view_ = true;
-
-			if ( this->device_ == Device::CUDA )
-			{
-				Tensor tr_contig({N, M});
-				tr_contig = tr_contig.to_cuda();
-				cuda::transpose_matrix(this->device_data(), tr_contig.device_data(), M, N);
-				tr = tr_contig;
-			}
+			tr.grad_.reset();
+			tr.device_grad_.reset();
+			tr.parents_.clear();
+			tr.backward_fn_ = std::function<void()>();
 					
 			tr.set_requires_grad(this->requires_grad_);
 			
 			if ( tr.requires_grad_ )
 			{
 				Tensor parent = *this;
+				std::vector<int> parent_shape = shape_;
 				tr.parents_ = {parent};
-				tr.backward_fn_ = [parent, tr, M, N]() mutable
+				tr.backward_fn_ = [parent, tr, parent_shape, dim0, dim1]() mutable
 				{
 					if ( parent.requires_grad_ )
 					{
 						if ( parent.device() == Device::CUDA )
-							cuda::add_transpose_matrix(tr.device_grad(), parent.device_grad(), M, N);
+							cuda::add_transpose_nd(tr.device_grad(), parent.device_grad(), parent_shape.data(), static_cast<int>(parent_shape.size()), dim0, dim1, parent.size());
 						else
 						{
-							for ( int i = 0; i < M; i++ )
-								for ( int j = 0; j < N; j++ )
-									parent.grad()[i * N + j] += tr.grad()[j * M + i];
+							int total = parent.size();
+							for ( int linear_parent = 0; linear_parent < total; ++linear_parent )
+							{
+								std::vector<int> parent_coords = unravel_index(linear_parent, parent_shape);
+								std::swap(parent_coords[dim0], parent_coords[dim1]);
+
+								std::vector<int> y_shape = parent_shape;
+								std::swap(y_shape[dim0], y_shape[dim1]);
+								int linear_y = static_cast<int>(ravel_index(parent_coords, y_shape));
+
+								parent.grad()[linear_parent] += tr.grad()[linear_y];
+							}
 						}
 					}
 				};
@@ -851,6 +856,8 @@ namespace cvmml {
 
 		float* Tensor::grad() const
 		{
+			if ( device_ == Device::CUDA && device_grad_ && grad_ )
+				cuda::copy_to_host(grad_.get(), device_grad_.get(), total_size_);
 			if ( grad_ )
 				return grad_.get();
 			return nullptr;

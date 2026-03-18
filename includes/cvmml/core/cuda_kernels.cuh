@@ -29,8 +29,7 @@ namespace cvmml {
 			void add_mul_scalar_arrays(float* grad, const float* grad_y, float val, int size);
 			void add_div_scalar_arrays(float* grad, const float* grad_y, float val, int size);
 
-			void transpose_matrix(const float* src, float* dst, int M, int N);
-			void add_transpose_matrix(const float* grad_y, float* grad_x, int M, int N);
+			void add_transpose_nd(const float* grad_y, float* grad_x, const int* parent_shape, int ndim, int dim0, int dim1, int total_size);
 
 			void matmult_backward_A(const float* grad_C, const float* B, float* grad_A, int M, int K, int N);
 			void matmult_backward_B(const float* A, const float* grad_C, float* grad_B, int M, int K, int N);
