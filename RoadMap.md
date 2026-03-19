@@ -49,9 +49,9 @@ Ce document trace la progression séquentielle du projet. Chaque étape doit êt
 *   **3.3 : Intégration API**
     *   [x] Méthodes `.to_cuda()` et `.to_cpu()` exposées en Python.
 
-- Enlever synchro systematique
-- Ajouter multithreading cpu
-- revoir transposition ?
+- [x] Enlever synchro systematique
+- [x] Ajouter multithreading cpu (OpenMP appliqué sur reduce, matmult, im2col, transpose backward)
+- [x] revoir transposition (backward optimisé)
 
 ---
 
@@ -69,18 +69,22 @@ Ce document trace la progression séquentielle du projet. Chaque étape doit êt
     *   [x] Build du modèle: `input_shape` explicite **ou** inférence au premier batch.
 
 *   **4.2 : Layers**
-    *   [ ] `Linear` (poids, biais, init Xavier/He simple).
-    *   [ ] `ReLU`.
-    *   [ ] `Softmax` (version stable numériquement).
-    *   [ ] `Conv2D` (MVP: stride=1, padding=0, dilation=1, groups=1).
-    *   [ ] `BatchNorm` & `LayerNorm`
+    *   [x] `Linear` (poids, biais, init Xavier/He simple).
+    *   [x] `ReLU`.
+    *   [x] `Softmax` (version stable numériquement).
+    *   [x] `Dropout` (masque aléatoire, gestion du flag `training`).
+    *   [x] `Conv2D` (MVP: stride=1, padding=0, dilation=1, groups=1).
+    *   [x] `BatchNorm` & `LayerNorm`
+    *   [x] Patterns avancés : Skip Connections (`ResidualBlock` utilisant l'opérateur tensoriel `+`).
 
 *   **4.3 : Losses**
-    *   [ ] `CrossEntropyLoss` (fusion Softmax + NLL recommandée pour stabilité).
-    *   [ ] Interface `LossFunction` générique.
+    *   [x] `CrossEntropyLoss` (fusion Softmax + NLL recommandée pour classification).
+    *   [ ] `MSELoss` (Mean Squared Error, utile pour la régression et les tests simples).
+    *   [x] Interface `LossFunction` générique.
 
 *   **4.4 : Optimizers**
-    *   [ ] `SGD` (lr, weight decay optionnel).
+    *   [x] `SGD` complet (lr, weight decay).
+    *   [ ] Ajouter le paramètre **Momentum** à l'optimiseur SGD.
     *   [ ] `Adam` (beta1, beta2, eps).
 
 *   **4.5 : Entraînement & Évaluation**

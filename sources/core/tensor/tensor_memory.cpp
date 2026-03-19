@@ -204,5 +204,33 @@ Tensor Tensor::randn(const std::vector<int>& shape, float mean, float std)
 	return t;
 }
 
+Tensor Tensor::bernoulli(const std::vector<int>& shape, float p)
+{
+	// What: Generate a tensor of 0s and 1s with P(1) = p.
+	// Why: Used by Dropout to create masks without NumPy dependency.
+	if ( p < 0.0f || p > 1.0f )
+		throw std::invalid_argument("bernoulli probability p must be in [0, 1].");
+	Tensor t(shape);
+	std::random_device rd;
+	std::mt19937 gen(rd());
+	std::bernoulli_distribution d(p);
+	for ( int i = 0; i < t.size(); ++i )
+		t.data()[i] = d(gen) ? 1.0f : 0.0f;
+	return t;
+}
+
+Tensor Tensor::uniform(const std::vector<int>& shape)
+{
+	// What: Generate a tensor of uniform random values in [0, 1).
+	// Why: General-purpose RNG primitive for the framework.
+	Tensor t(shape);
+	std::random_device rd;
+	std::mt19937 gen(rd());
+	std::uniform_real_distribution<float> d(0.0f, 1.0f);
+	for ( int i = 0; i < t.size(); ++i )
+		t.data()[i] = d(gen);
+	return t;
+}
+
 } // namespace core
 } // namespace cvmml

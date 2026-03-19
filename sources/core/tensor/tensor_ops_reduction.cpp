@@ -287,6 +287,8 @@ Tensor Tensor::min(const std::vector<int>& axes, bool keepdim) const
 
 Tensor Tensor::mean(const std::vector<int>& axes, bool keepdim)const
 {
+	// What: Computes the arithmetic mean over specified axes.
+	// Why: Frequently used in loss functions and normalization layers (like BatchNorm).
 	std::vector<int> norm_axes = detail::normalize_axes(axes, static_cast<int>(shape_.size()));
 	float denom = 1.0f;
 	for ( int axis : norm_axes )
@@ -296,6 +298,8 @@ Tensor Tensor::mean(const std::vector<int>& axes, bool keepdim)const
 
 Tensor Tensor::var(const std::vector<int>& axes, bool keepdim) const
 {
+	// What: Computes the variance over specified axes using the mean.
+	// Why: Essential for normalization layers to standardize activations.
 	std::vector<int> norm_axes = detail::normalize_axes(axes, static_cast<int>(shape_.size()));
 	Tensor m = this->mean(norm_axes, true);
 	Tensor centered = *this - m;

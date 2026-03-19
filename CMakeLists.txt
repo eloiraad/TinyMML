@@ -15,11 +15,13 @@ set(CORE_SOURCES
 	sources/core/tensor/tensor_ops_elementwise.cpp
 	sources/core/tensor/tensor_ops_reduction.cpp
 	sources/core/tensor/tensor_ops_linalg.cpp
+	sources/core/tensor/tensor_ops_conv.cpp
 	sources/core/tensor/tensor_autograd.cpp
 	sources/core/cuda/cuda_kernels_elementwise.cu
 	sources/core/cuda/cuda_kernels_backward.cu
 	sources/core/cuda/cuda_kernels_reduction.cu
 	sources/core/cuda/cuda_kernels_advanced.cu
+	sources/core/cuda/cuda_kernels_conv.cu
 )
 add_library(cvmml_core OBJECT ${CORE_SOURCES})
 target_include_directories(cvmml_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/includes)

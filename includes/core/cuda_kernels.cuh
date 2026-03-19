@@ -59,6 +59,11 @@ void reduce_scatter_backward(const float* grad_out, float* grad_in, const int* a
 
 void matmul(const float *a, const float *b, float *out, int M, int K, int N);
 
+void im2col(const float* data_im, float* data_col,
+            int batch, int channels, int height, int width,
+            int kH, int kW, int stride, int pad,
+            int height_out, int width_out);
+
 } // namespace cuda
 } // namespace core
 } // namespace cvmml

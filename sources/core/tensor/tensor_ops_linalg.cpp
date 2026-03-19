@@ -231,6 +231,10 @@ Tensor Tensor::transpose(int dim0, int dim1) const
 			}
 
 			int total = parent.size();
+			const bool parallel_bwd = total >= 100000;
+			#ifdef _OPENMP
+			#pragma omp parallel for if(parallel_bwd)
+			#endif
 			for ( int linear_parent = 0; linear_parent < total; ++linear_parent )
 			{
 				std::vector<int> parent_coords = detail::unravel_index(linear_parent, parent_shape);

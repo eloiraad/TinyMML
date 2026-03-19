@@ -66,6 +66,8 @@ class Tensor {
 		static Tensor zeros( const std::vector<int>& shape );
 		static Tensor ones( const std::vector<int>& shape );
 		static Tensor randn( const std::vector<int>& shape, float mean, float std );
+		static Tensor bernoulli( const std::vector<int>& shape, float p );
+		static Tensor uniform( const std::vector<int>& shape );
 
 		Tensor operator+( const Tensor& rhs ) const;
 		Tensor operator-( const Tensor& rhs ) const;
@@ -90,7 +92,9 @@ class Tensor {
 		Tensor matmult( const Tensor& rhs ) const;
 		Tensor transpose(int dim0 = -2, int dim1 = -1) const;
 
-		
+		void subtract_( const Tensor& rhs );
+
+		Tensor im2col( int kH, int kW, int stride, int pad ) const;
 
 		bool requires_grad() const;
 		void set_requires_grad( bool val );

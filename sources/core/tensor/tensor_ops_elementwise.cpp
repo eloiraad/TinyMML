@@ -154,17 +154,26 @@ Tensor Tensor::operator*(const Tensor& rhs) const
 
 	std::vector<int> out_shape = detail::broadcast_shape_nd(lhs_cont.shape(), rhs_cont.shape());
 	Tensor result(out_shape);
-	Tensor lhs_host = (this->device_ == Device::CUDA) ? lhs_cont.to_cpu() : lhs_cont;
-	Tensor rhs_host = (this->device_ == Device::CUDA) ? rhs_cont.to_cpu() : rhs_cont;
-	for ( int i = 0; i < result.size(); ++i )
+
+	if ( this->device_ == Device::CUDA && lhs_cont.shape() == rhs_cont.shape() && out_shape == lhs_cont.shape() )
 	{
-		std::vector<int> out_coords = detail::unravel_index(i, out_shape);
-		int64_t ia = detail::linear_for_broadcast_operand(out_coords, lhs_host.shape(), lhs_host.strides());
-		int64_t ib = detail::linear_for_broadcast_operand(out_coords, rhs_host.shape(), rhs_host.strides());
-		result.data()[i] = lhs_host.data()[ia] * rhs_host.data()[ib];
-	}
-	if ( this->device_ == Device::CUDA )
 		result = result.to_cuda();
+		cuda::mul_arrays(lhs_cont.device_data(), rhs_cont.device_data(), result.device_data(), result.size());
+	}
+	else
+	{
+		Tensor lhs_host = (this->device_ == Device::CUDA) ? lhs_cont.to_cpu() : lhs_cont;
+		Tensor rhs_host = (this->device_ == Device::CUDA) ? rhs_cont.to_cpu() : rhs_cont;
+		for ( int i = 0; i < result.size(); ++i )
+		{
+			std::vector<int> out_coords = detail::unravel_index(i, out_shape);
+			int64_t ia = detail::linear_for_broadcast_operand(out_coords, lhs_host.shape(), lhs_host.strides());
+			int64_t ib = detail::linear_for_broadcast_operand(out_coords, rhs_host.shape(), rhs_host.strides());
+			result.data()[i] = lhs_host.data()[ia] * rhs_host.data()[ib];
+		}
+		if ( this->device_ == Device::CUDA )
+			result = result.to_cuda();
+	}
 
 	result.set_requires_grad(this->requires_grad_ || rhs.requires_grad_);
 	if ( result.requires_grad_ )
@@ -216,17 +225,26 @@ Tensor Tensor::operator/(const Tensor& rhs) const
 
 	std::vector<int> out_shape = detail::broadcast_shape_nd(lhs_cont.shape(), rhs_cont.shape());
 	Tensor result(out_shape);
-	Tensor lhs_host = (this->device_ == Device::CUDA) ? lhs_cont.to_cpu() : lhs_cont;
-	Tensor rhs_host = (this->device_ == Device::CUDA) ? rhs_cont.to_cpu() : rhs_cont;
-	for ( int i = 0; i < result.size(); ++i )
+
+	if ( this->device_ == Device::CUDA && lhs_cont.shape() == rhs_cont.shape() && out_shape == lhs_cont.shape() )
 	{
-		std::vector<int> out_coords = detail::unravel_index(i, out_shape);
-		int64_t ia = detail::linear_for_broadcast_operand(out_coords, lhs_host.shape(), lhs_host.strides());
-		int64_t ib = detail::linear_for_broadcast_operand(out_coords, rhs_host.shape(), rhs_host.strides());
-		result.data()[i] = lhs_host.data()[ia] / rhs_host.data()[ib];
-	}
-	if ( this->device_ == Device::CUDA )
 		result = result.to_cuda();
+		cuda::div_arrays(lhs_cont.device_data(), rhs_cont.device_data(), result.device_data(), result.size());
+	}
+	else
+	{
+		Tensor lhs_host = (this->device_ == Device::CUDA) ? lhs_cont.to_cpu() : lhs_cont;
+		Tensor rhs_host = (this->device_ == Device::CUDA) ? rhs_cont.to_cpu() : rhs_cont;
+		for ( int i = 0; i < result.size(); ++i )
+		{
+			std::vector<int> out_coords = detail::unravel_index(i, out_shape);
+			int64_t ia = detail::linear_for_broadcast_operand(out_coords, lhs_host.shape(), lhs_host.strides());
+			int64_t ib = detail::linear_for_broadcast_operand(out_coords, rhs_host.shape(), rhs_host.strides());
+			result.data()[i] = lhs_host.data()[ia] / rhs_host.data()[ib];
+		}
+		if ( this->device_ == Device::CUDA )
+			result = result.to_cuda();
+	}
 
 	result.set_requires_grad(this->requires_grad_ || rhs.requires_grad_);
 	if ( result.requires_grad_ )
@@ -544,6 +562,23 @@ Tensor Tensor::sqrt() const
 		};
 	}
 	return result;
+}
+
+void Tensor::subtract_( const Tensor& rhs )
+{
+	// What: In-place elementwise subtraction for optimizer weight updates.
+	// Why: Avoids allocating a new tensor per SGD step.
+	detail::check_same_device(*this, rhs);
+	if ( shape_ != rhs.shape() )
+		throw std::invalid_argument("subtract_ requires tensors with the same shape.");
+	if ( !is_contiguous() || !rhs.is_contiguous() )
+		throw std::invalid_argument("subtract_ requires contiguous tensors.");
+
+	if ( device_ == Device::CUDA )
+		cuda::sub_arrays(device_data(), rhs.device_data(), device_data(), total_size_);
+	else
+		for ( int i = 0; i < total_size_; ++i )
+			data()[i] -= rhs.data()[i];
 }
 
 } // namespace core

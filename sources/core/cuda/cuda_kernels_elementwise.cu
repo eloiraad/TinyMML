@@ -95,6 +95,13 @@ __global__ void fill_ones_kernel(float* ptr, int size)
 		ptr[idx] = 1.0f;
 }
 
+__global__ void fill_value_kernel(float* ptr, float val, int size)
+{
+	int idx = blockIdx.x * blockDim.x + threadIdx.x;
+	if ( idx < size )
+		ptr[idx] = val;
+}
+
 __global__ void relu_kernel(const float* a, float* out, int size)
 {
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -275,6 +282,13 @@ void set_memory(float* ptr, float val, int size)
 {
 	if ( val == 0.0f )
 		CHECK_CUDA(cudaMemset(ptr, 0, size * sizeof(float)));
+	else
+	{
+		dim3 blockSize, gridSize;
+		get_grid_1d(size, blockSize, gridSize);
+		fill_value_kernel<<<gridSize, blockSize>>>(ptr, val, size);
+		CHECK_CUDA_LAUNCH();
+	}
 }
 
 void copy_to_device(float* dst, const float* src, int size)

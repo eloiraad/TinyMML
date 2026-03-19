@@ -60,6 +60,8 @@ void Tensor::backward()
 	// Why: Preserves existing autograd contract and topological ordering semantics.
 	if ( !requires_grad_ )
 		return;
+	if ( total_size_ != 1 )
+		throw std::runtime_error("backward() can only be called on a scalar (size=1) tensor. Use .sum() first.");
 	if ( !grad_ || (device_ == Device::CUDA && !device_grad_) )
 		set_requires_grad(true);
 

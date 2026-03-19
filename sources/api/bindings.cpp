@@ -70,6 +70,10 @@ PYBIND11_MODULE(cvmml_api, m)
 		.def_static("zeros", &Tensor::zeros, py::arg("shape"))
 		.def_static("ones", &Tensor::ones, py::arg("shape"))
 		.def_static("randn", &Tensor::randn, py::arg("shape"), py::arg("mean")=0.0f, py::arg("std")=1.0f)
+		.def_static("bernoulli", &Tensor::bernoulli, py::arg("shape"), py::arg("p"))
+		.def_static("uniform", &Tensor::uniform, py::arg("shape"))
+
+		.def("im2col", &Tensor::im2col, py::arg("kH"), py::arg("kW"), py::arg("stride")=1, py::arg("pad")=0)
 
 		.def("__repr__", [](const Tensor& t)
 		{
@@ -100,5 +104,10 @@ PYBIND11_MODULE(cvmml_api, m)
 		.def("relu", &Tensor::relu)
 		.def("sqrt", &Tensor::sqrt)
 		.def("mean", &Tensor::mean, py::arg("axes") = std::vector<int>{}, py::arg("keepdim") = false)
-		.def("var", &Tensor::var, py::arg("axes") = std::vector<int>{}, py::arg("keepdim") = false);
+		.def("var", &Tensor::var, py::arg("axes") = std::vector<int>{}, py::arg("keepdim") = false)
+		.def("subtract_", &Tensor::subtract_)
+		.def("__isub__", [](Tensor& self, const Tensor& other) -> Tensor& {
+			self.subtract_(other);
+			return self;
+		}, py::return_value_policy::reference_internal);
 }
