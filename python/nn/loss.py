@@ -43,3 +43,15 @@ class CrossEntropyLoss(LossFunction):
 		nll = (targets * log_softmax).sum([1], False)
 		loss = nll.sum([0], False) * (-1.0 / logits.shape()[0])
 		return loss
+
+class MSELoss(LossFunction):
+	"""
+	Mean Squared Error loss.
+	"""
+	def forward(self, predictions, targets):
+		diff = predictions - targets
+		sq = diff * diff
+		axes = list(range(len(sq.shape())))
+		loss = sq.mean(axes, False)
+		return loss
+

@@ -79,13 +79,13 @@ Ce document trace la progression séquentielle du projet. Chaque étape doit êt
 
 *   **4.3 : Losses**
     *   [x] `CrossEntropyLoss` (fusion Softmax + NLL recommandée pour classification).
-    *   [ ] `MSELoss` (Mean Squared Error, utile pour la régression et les tests simples).
+    *   [x] `MSELoss` (Mean Squared Error, utile pour la régression et les tests simples).
     *   [x] Interface `LossFunction` générique.
 
 *   **4.4 : Optimizers**
     *   [x] `SGD` complet (lr, weight decay).
-    *   [ ] Ajouter le paramètre **Momentum** à l'optimiseur SGD.
-    *   [ ] `Adam` (beta1, beta2, eps).
+    *   [x] Ajouter le paramètre **Momentum** à l'optimiseur SGD.
+    *   [x] `Adam` (beta1, beta2, eps).
 
 *   **4.5 : Entraînement & Évaluation**
     *   [ ] `model.train(...)` (epochs, batch_size, shuffle, lr).
