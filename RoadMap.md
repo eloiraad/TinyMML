@@ -64,9 +64,9 @@ Ce document trace la progression séquentielle du projet. Chaque étape doit êt
     *   [x] Vérifier l’autograd de ces ops (CPU/CUDA).
 
 *   **4.1 : Abstractions de base**
-    *   [ ] Classe abstraite `Layer` (`forward`, `parameters`, `train`, `eval`).
-    *   [ ] Classe `Model` avec liste de `Layer`, `forward`, `__call__`, `parameters`.
-    *   [ ] Build du modèle: `input_shape` explicite **ou** inférence au premier batch.
+    *   [x] Classe abstraite `Layer` (`forward`, `parameters`, `train`, `eval`).
+    *   [x] Classe `Model` avec liste de `Layer`, `forward`, `__call__`, `parameters`.
+    *   [x] Build du modèle: `input_shape` explicite **ou** inférence au premier batch.
 
 *   **4.2 : Layers**
     *   [ ] `Linear` (poids, biais, init Xavier/He simple).

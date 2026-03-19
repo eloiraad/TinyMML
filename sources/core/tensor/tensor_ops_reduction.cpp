@@ -285,5 +285,23 @@ Tensor Tensor::min(const std::vector<int>& axes, bool keepdim) const
 	return result;
 }
 
+Tensor Tensor::mean(const std::vector<int>& axes, bool keepdim)const
+{
+	std::vector<int> norm_axes = detail::normalize_axes(axes, static_cast<int>(shape_.size()));
+	float denom = 1.0f;
+	for ( int axis : norm_axes )
+		denom *= static_cast<float>(shape_[axis]);
+	return this->sum(norm_axes, keepdim) / denom;
+}
+
+Tensor Tensor::var(const std::vector<int>& axes, bool keepdim) const
+{
+	std::vector<int> norm_axes = detail::normalize_axes(axes, static_cast<int>(shape_.size()));
+	Tensor m = this->mean(norm_axes, true);
+	Tensor centered = *this - m;
+	Tensor squared = centered * centered;
+	return squared.mean(norm_axes, keepdim);
+}
+
 } // namespace core
 } // namespace cvmml

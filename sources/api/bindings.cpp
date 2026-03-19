@@ -96,6 +96,9 @@ PYBIND11_MODULE(cvmml_api, m)
 
 		.def("device", &Tensor::device)
 		.def("to_cuda", &Tensor::to_cuda)
-		.def("to_cpu", &Tensor::to_cpu);
-
+		.def("to_cpu", &Tensor::to_cpu)
+		.def("relu", &Tensor::relu)
+		.def("sqrt", &Tensor::sqrt)
+		.def("mean", &Tensor::mean, py::arg("axes") = std::vector<int>{}, py::arg("keepdim") = false)
+		.def("var", &Tensor::var, py::arg("axes") = std::vector<int>{}, py::arg("keepdim") = false);
 }

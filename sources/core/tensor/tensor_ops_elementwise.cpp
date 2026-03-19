@@ -469,5 +469,82 @@ Tensor Tensor::log() const
 	return result;
 }
 
+Tensor Tensor::relu() const
+{
+	Tensor src = this->is_contiguous() ? *this : this->contiguous();
+	Tensor result(this->shape_);
+
+	if ( this->device_ == Device::CUDA )
+	{
+		result = result.to_cuda();
+		cuda::relu_array(src.device_data(), result.device_data(), total_size_);
+	}
+	else
+		for ( int i = 0; i < total_size_; i++ )
+			result.data()[i] = std::max(0.0f, src.data()[i]);
+
+	result.set_requires_grad(this->requires_grad_);
+	if ( result.requires_grad_ )
+	{
+		Tensor parent = *this;
+		result.parents_ = {parent};
+		result.backward_fn_ = [parent, result]() mutable
+		{
+			if ( !parent.requires_grad_ )
+				return; //? Inutile ?
+			if ( parent.device() == Device::CUDA )
+				cuda::relu_backward_array(parent.device_grad(), result.device_grad(), parent.device_data(), parent.size());
+			else
+			{
+				float* gp = parent.grad();
+				float* go = result.grad();
+				float* xp = parent.data();
+				for ( int i = 0; i < parent.size(); i++ )
+					gp[i] += (xp[i] > 0.0f) ? go[i] : 0.0f;
+			}
+		};
+	}
+	return result;
+}
+
+Tensor Tensor::sqrt() const
+{
+	Tensor src = this->is_contiguous() ? *this : this->contiguous();
+	Tensor result(this->shape_);
+
+	if ( this->device_ == Device::CUDA )
+	{
+		result = result.to_cuda();
+		cuda::sqrt_array(src.device_data(), result.device_data(), total_size_);
+	}
+	else
+		for ( int i = 0; i < total_size_; i++ )
+			result.data()[i] = std::sqrt(src.data()[i]); //? sqrtf ?
+
+	result.set_requires_grad(this->requires_grad_);
+	if ( result.requires_grad_ )
+	{
+		Tensor parent = *this;
+		result.parents_ = {parent};
+		result.backward_fn_ = [parent, result]() mutable
+		{
+			if ( !parent.requires_grad_ )
+				return;
+			if ( parent.device() == Device::CUDA )
+				cuda::sqrt_backward_array(parent.device_grad(), result.device_grad(), result.device_data(), parent.size());
+			else
+			{
+				float* gp = parent.grad();
+				float* go = result.grad();
+				float* y = result.data();
+				for ( int i = 0; i < parent.size(); i++ )
+					if ( y[i] > 0.0f )
+						gp[i] += go[i] * (0.5f / y[i]);
+			}
+		};
+	}
+	return result;
+}
+
 } // namespace core
 } // namespace cvmml

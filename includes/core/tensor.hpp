@@ -82,9 +82,15 @@ class Tensor {
 		Tensor sum( const std::vector<int>& axes = {}, bool keepdim = false ) const;
 		Tensor max( const std::vector<int>& axes = {}, bool keepdim = false ) const;
 		Tensor min( const std::vector<int>& axes = {}, bool keepdim = false ) const;
+		Tensor relu() const;
+		Tensor sqrt() const;
+		Tensor mean( const std::vector<int>& axes = {}, bool keepdim = false ) const;
+		Tensor var( const std::vector<int>& axes = {}, bool keepdim = false ) const;
 
 		Tensor matmult( const Tensor& rhs ) const;
 		Tensor transpose(int dim0 = -2, int dim1 = -1) const;
+
+		
 
 		bool requires_grad() const;
 		void set_requires_grad( bool val );

@@ -24,12 +24,19 @@ void sub_arrays(const float *a, const float *b, float *out, int size);
 void mul_arrays(const float *a, const float *b, float *out, int size);
 void div_arrays(const float *a, const float *b, float *out, int size);
 
+void exp_array(const float *a, float *out, int size);
+void log_array(const float *a, float *out, int size);
+
+void relu_array( const float *a, float *out, int size);
+void relu_backward_array( float* grad, const float* grad_y, const float* x, int size);
+
+void sqrt_array( const float* a, float* out, int size);
+void sqrt_backward_array( float* grad, const float* grad_y, const float* x, int size);
+
 void add_scalar(const float *a, float scalar, float *out, int size);
 void sub_scalar(const float *a, float scalar, float *out, int size);
 void mul_scalar(const float *a, float scalar, float *out, int size);
 void div_scalar(const float *a, float scalar, float *out, int size);
-void exp_array(const float *a, float *out, int size);
-void log_array(const float *a, float *out, int size);
 
 void add_mul_arrays(float* grad, const float* grad_y, const float* val, int size);
 void add_div_arrays(float* grad, const float* grad_y, const float* val, int size);
