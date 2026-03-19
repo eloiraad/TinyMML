@@ -23,8 +23,16 @@ namespace core {
 
 Tensor Tensor::matmult(const Tensor& rhs) const
 {
-	// What: Batched matrix multiplication with broadcasted batch dimensions.
-	// Why: Keeps matmul API stable while supporting CPU and CUDA paths.
+/**
+ * @brief Multiplication matricielle par lots (Batched Matrix Multiplication).
+ *
+ * @details
+ * L'opération mathématique la plus critique des réseaux de neurones (Fully Connected, Conv2D, Attention).
+ * Applique une multiplication C = A * B. Gère automatiquement le broadcast des dimensions de batch.
+ *
+ * @param rhs (Tensor&) [..., K, N] La matrice de poids (ou d'activations secondaires) à multiplier avec le tenseur courant [..., M, K].
+ * @return (Tensor) [..., M, N] Nouveau tenseur issu de la multiplication.
+ */
 	if ( this->shape_.size() < 2 || rhs.shape().size() < 2 )
 		throw std::invalid_argument("matmult requires tensors with at least 2 dimensions.");
 	detail::check_same_device(*this, rhs);
@@ -192,8 +200,17 @@ Tensor Tensor::matmult(const Tensor& rhs) const
 
 Tensor Tensor::transpose(int dim0, int dim1) const
 {
-	// What: Create a stride-based transpose view over two dimensions.
-	// Why: Avoids data copies while keeping backward mapping explicit.
+/**
+ * @brief Transpose deux dimensions arbitraires au sein du tenseur.
+ *
+ * @details
+ * Indispensable pour réaligner les tenseurs entre différentes opérations sans copie de mémoire.
+ * Modifie virtuellement la vue du tenseur en croisant les "strides" ainsi que la "shape". L'opération forward est sans allocation (zero-copy), tandis que son noeud autograd répartit les gradients asynchronement lors de la passe backward.
+ *
+ * @param dim0 (int) Index de la première dimension à transposer.
+ * @param dim1 (int) Index de la seconde dimension (supporte les index négatifs).
+ * @return (Tensor) [Mêmes dimensions mais permutées] Une nouvelle vue du tenseur (zero-copy).
+ */
 	int rank = static_cast<int>(shape_.size());
 	if ( rank < 2 )
 		throw std::invalid_argument("transpose requires tensors with at least 2 dimensions.");

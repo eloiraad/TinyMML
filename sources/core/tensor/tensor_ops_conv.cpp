@@ -7,9 +7,19 @@ namespace core {
 
 Tensor Tensor::im2col(int kH, int kW, int stride, int pad) const
 {
-	// What: Extract convolution patches from [B, C, H, W] into a columns matrix
-	//       of shape [B, C*kH*kW, H_out*W_out].
-	// Why:  Reduces convolution to a GEMM, enabling reuse of the optimised matmult path.
+/**
+ * @brief Extrait et aplanit les patchs d'une image pour convolution.
+ *
+ * @details
+ * Permet d'implémenter la convolution 2D comme une simple multiplication matricielle, exploitant ainsi les optimisations de `matmult`.
+ * Parcours la matrice spatiale par fenêtres glissantes et copie chaque patch sous forme de colonne. La boucle CPU sur les batchs est parallélisée.
+ *
+ * @param kH (int) Hauteur du noyau de convolution.
+ * @param kW (int) Largeur du noyau de convolution.
+ * @param stride (int) Décalage spatial entre chaque prise de patch.
+ * @param pad (int) Remplissage de zéros symétrique ajouté tout autour de l'image (hauteur et largeur).
+ * @return (Tensor) [B, C*kH*kW, H_out*W_out] Tenseur 3D contenant toutes les colonnes extraites pour chaque image.
+ */
 	if ( shape_.size() != 4 )
 		throw std::invalid_argument("im2col requires a 4‑D tensor [B, C, H, W].");
 

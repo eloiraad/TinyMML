@@ -7,8 +7,6 @@ namespace core {
 
 Tensor Tensor::operator+(const Tensor& rhs) const
 {
-	// What: Elementwise addition with NumPy-style broadcasting.
-	// Why: Preserves existing API semantics for both CPU and CUDA tensors.
 	detail::check_same_device(*this, rhs);
 	Tensor lhs_cont = this->is_contiguous() ? *this : this->contiguous();
 	Tensor rhs_cont = rhs.is_contiguous() ? rhs : rhs.contiguous();
@@ -566,8 +564,6 @@ Tensor Tensor::sqrt() const
 
 void Tensor::subtract_( const Tensor& rhs )
 {
-	// What: In-place elementwise subtraction for optimizer weight updates.
-	// Why: Avoids allocating a new tensor per SGD step.
 	detail::check_same_device(*this, rhs);
 	if ( shape_ != rhs.shape() )
 		throw std::invalid_argument("subtract_ requires tensors with the same shape.");

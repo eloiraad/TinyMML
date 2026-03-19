@@ -5,14 +5,8 @@ namespace cvmml {
 namespace core {
 namespace cuda {
 
-__global__ void im2col_kernel(
-	const float* data_im, float* data_col,
-	int channels, int height, int width,
-	int kH, int kW, int stride, int pad,
-	int height_out, int width_out)
+__global__ void im2col_kernel( const float* data_im, float* data_col, int channels, int height, int width, int kH, int kW, int stride, int pad, int height_out, int width_out)
 {
-	// Each thread computes one element in the output columns matrix.
-	// Layout: data_col[c_col * (H_out * W_out) + hw_out]
 	int total = channels * kH * kW * height_out * width_out;
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
 	if ( idx >= total )
@@ -39,10 +33,7 @@ __global__ void im2col_kernel(
 	data_col[c_col * (height_out * width_out) + hw_out] = val;
 }
 
-void im2col(const float* data_im, float* data_col,
-            int batch, int channels, int height, int width,
-            int kH, int kW, int stride, int pad,
-            int height_out, int width_out)
+void im2col(const float* data_im, float* data_col, int batch, int channels, int height, int width, int kH, int kW, int stride, int pad, int height_out, int width_out)
 {
 	int col_channels = channels * kH * kW;
 	int per_image = col_channels * height_out * width_out;

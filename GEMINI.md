@@ -73,3 +73,46 @@ Tu opères exclusivement dans un environnement **WSL (Ubuntu/Debian)**. Tu dois 
 ### 4. Résolution de Problèmes (Troubleshooting)
 - Si une commande échoue avec "Command not found", vérifie si le binaire est installé via `which [commande]`.
 - Si un script Python ne trouve pas ses dépendances, force l'utilisation de `sys.executable` pour confirmer que tu es bien dans le bon venv.
+
+## 6. Formatage :
+Le lecteur (humain ou agent) doit comprendre immédiatement le Quoi, Pourquoi, Comment, et les dimensions des tenseurs.
+
+### 1. Règles de formatage :
+1. Pour PYTHON : Utilise le format "Google Style Docstring" (triple guillemets `"""`).
+2. Pour C++ et CUDA : Utilise le format Doxygen (commentaires en bloc `/** ... */`).
+
+### 2. Structure des commentaires :
+Structure obligatoire du contenu (à adapter au format du langage) :
+- [QUOI] : Une phrase courte résumant l'action.
+- [POURQUOI] : Le rôle de cette fonction dans le réseau de neurones/framework.
+- [COMMENT] : 1 à 3 points expliquant la logique (ex: layout des threads CUDA, formule appliquée, in-place vs copie).
+- [PARAMÈTRES] : Liste exhaustive. Si le paramètre est un Tenseur ou un Array, tu DOIS préciser ses dimensions exactes (ex: [B, C, H, W]).
+
+### TEMPLATE PYTHON (Google Style)
+"""
+[brief] Résumé d'une ligne.
+
+[details]
+Explication de l'utilité dans le contexte global.
+Détails sur la mécanique interne (ex: opérations in-place, formules).
+
+Args:
+	param1 (Type): [Dimensions si Tenseur] Description claire.
+	param2 (Type): [Dimensions si Tenseur] Description claire.
+
+Returns:
+	Type: [Dimensions si Tenseur] Description de la sortie.
+"""
+
+### TEMPLATE C++ / CUDA (Doxygen)
+/**
+ * @brief Résumé d'une ligne.
+ *
+ * @details
+ * Explication de l'utilité contextuelle.
+ * Détails sur la mécanique (ex: distribution des blocs/threads, accès mémoire).
+ *
+ * @param param1 (Type) [Dimensions si Tenseur] Description.
+ * @param param2 (Type) [Dimensions si Tenseur] Description.
+ * @return (Type) [Dimensions si Tenseur] Description de la sortie (si applicable).
+ */

@@ -15,8 +15,6 @@ bool Tensor::requires_grad() const
 
 void Tensor::set_requires_grad(bool val)
 {
-	// What: Enable/disable gradient tracking buffers for this tensor.
-	// Why: Keeps gradient allocation lazy and device-consistent.
 	requires_grad_ = val;
 	if ( val && !grad_ )
 		grad_ = std::shared_ptr<float[]>(new float[total_size_]());
@@ -45,8 +43,6 @@ float* Tensor::device_grad() const
 
 void Tensor::zero_grad()
 {
-	// What: Reset host/device gradient buffers to zero.
-	// Why: Prevents stale accumulation between optimization steps.
 	if ( grad_ )
 		for ( int i = 0; i < total_size_; ++i )
 			grad_[i] = 0.0f;
@@ -56,8 +52,6 @@ void Tensor::zero_grad()
 
 void Tensor::backward()
 {
-	// What: Execute reverse-mode autodiff over the reachable computation graph.
-	// Why: Preserves existing autograd contract and topological ordering semantics.
 	if ( !requires_grad_ )
 		return;
 	if ( total_size_ != 1 )

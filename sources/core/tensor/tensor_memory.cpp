@@ -12,8 +12,6 @@ static std::atomic<uint64_t> tensor_global_id{0};
 
 Tensor::Tensor(const std::vector<int>& shape) : shape_(shape), total_size_(1), id_(++tensor_global_id)
 {
-	// What: Allocate host storage and initialize metadata for a dense tensor.
-	// Why: Keeps constructor semantics stable for Python/C++ callers.
 	if ( shape.empty() )
 		total_size_ = 0;
 	else
@@ -31,8 +29,6 @@ Tensor::Tensor(const std::vector<int>& shape) : shape_(shape), total_size_(1), i
 
 void Tensor::compute_strides()
 {
-	// What: Compute row-major strides from current shape.
-	// Why: Central stride source used by indexing and views.
 	strides_.resize(shape_.size());
 	if ( shape_.empty() )
 		return;
@@ -59,8 +55,6 @@ float* Tensor::data() const
 
 bool Tensor::is_contiguous() const
 {
-	// What: Validate current strides against row-major contiguous strides.
-	// Why: Guards view/pack paths and CUDA contiguous assumptions.
 	if ( shape_.empty() )
 		return true;
 	int expected_stride = 1;
@@ -75,8 +69,6 @@ bool Tensor::is_contiguous() const
 
 Tensor Tensor::contiguous() const
 {
-	// What: Materialize a contiguous tensor from possibly strided/view input.
-	// Why: Enables kernels and ops that require dense linear memory.
 	if ( is_contiguous() && offset_ == 0 )
 		return *this;
 
@@ -106,8 +98,6 @@ Tensor Tensor::contiguous() const
 
 Tensor Tensor::view(const std::vector<int>& new_shape) const
 {
-	// What: Create a reshape view over contiguous storage.
-	// Why: Preserves data aliasing while preventing invalid shape inference.
 	if ( !is_contiguous() )
 		throw std::invalid_argument("view() requires a contiguous tensor. Call contiguous() first.");
 
@@ -206,8 +196,6 @@ Tensor Tensor::randn(const std::vector<int>& shape, float mean, float std)
 
 Tensor Tensor::bernoulli(const std::vector<int>& shape, float p)
 {
-	// What: Generate a tensor of 0s and 1s with P(1) = p.
-	// Why: Used by Dropout to create masks without NumPy dependency.
 	if ( p < 0.0f || p > 1.0f )
 		throw std::invalid_argument("bernoulli probability p must be in [0, 1].");
 	Tensor t(shape);
@@ -221,8 +209,6 @@ Tensor Tensor::bernoulli(const std::vector<int>& shape, float p)
 
 Tensor Tensor::uniform(const std::vector<int>& shape)
 {
-	// What: Generate a tensor of uniform random values in [0, 1).
-	// Why: General-purpose RNG primitive for the framework.
 	Tensor t(shape);
 	std::random_device rd;
 	std::mt19937 gen(rd());

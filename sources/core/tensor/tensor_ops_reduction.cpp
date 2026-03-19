@@ -24,8 +24,17 @@ namespace core {
 
 Tensor Tensor::sum(const std::vector<int>& axes, bool keepdim) const
 {
-	// What: Reduce tensor values with configurable axes and keepdim semantics.
-	// Why: Provides a stable reduction contract required by autograd and nn layers.
+/**
+ * @brief Réduit les dimensions d'un tenseur par sommation.
+ *
+ * @details
+ * Utile pour accumuler les pertes (loss), les agrégations de probabilités, ou le backward des gradients résiduels/broadcastés.
+ * L'algorithme CPU accumule sur toutes les dimensions spécifiées, ou bascule sur le kernel CUDA approprié.
+ *
+ * @param axes (std::vector<int>) Dimensions le long desquelles réduire (e.g. {0} pour le temps/batch).
+ * @param keepdim (bool) Si True, maintient les dimensions réduites avec une taille de 1 (utile pour l'alignement / broadcast ultérieur).
+ * @return (Tensor) Tenseur réduit et dimensionné selon 'keepdim'.
+ */
 	Tensor src_cont = this->is_contiguous() ? *this : this->contiguous();
 	std::vector<int> norm_axes = detail::normalize_axes(axes, static_cast<int>(shape_.size()));
 	std::vector<int> out_shape = detail::reduced_shape_from_axes(shape_, norm_axes, keepdim);
@@ -97,8 +106,17 @@ Tensor Tensor::sum(const std::vector<int>& axes, bool keepdim) const
 
 Tensor Tensor::max(const std::vector<int>& axes, bool keepdim) const
 {
-	// What: Reduce by maximum with first-index tie-break.
-	// Why: Deterministic ties are required for stable backward tests.
+/**
+ * @brief Trouve la valeur maximale sur des axes donnés.
+ *
+ * @details
+ * Nécessaire pour stabiliser Softmax numériquement.
+ * Stocke à la fois la valeur maximale et son index global 1D.
+ *
+ * @param axes (std::vector<int>) Axes de réduction consécutifs.
+ * @param keepdim (bool) Préserve le rang d'origine du tenseur.
+ * @return (Tensor) Le tenseur réduit aux maximums de la zone cible.
+ */
 	Tensor src_cont = this->is_contiguous() ? *this : this->contiguous();
 	std::vector<int> norm_axes = detail::normalize_axes(axes, static_cast<int>(shape_.size()));
 	std::vector<int> out_shape = detail::reduced_shape_from_axes(shape_, norm_axes, keepdim);
@@ -192,8 +210,17 @@ Tensor Tensor::max(const std::vector<int>& axes, bool keepdim) const
 
 Tensor Tensor::min(const std::vector<int>& axes, bool keepdim) const
 {
-	// What: Reduce by minimum with first-index tie-break, aligned with max policy.
-	// Why: Keeps deterministic gradient routing and API symmetry.
+/**
+ * @brief Trouve la valeur minimale sur des axes donnés.
+ *
+ * @details
+ * Symétrique de max(), utilisé pour des bornes restrictives ou une symétrie dans l'API.
+ * Implémenté selon la même logique fondamentale de routage du gradient que l'opération `max`.
+ *
+ * @param axes (std::vector<int>) Axes de réduction.
+ * @param keepdim (bool) Garder les dimensions dans la forme finale.
+ * @return (Tensor) Le tenseur réduit aux minimums locaux.
+ */
 	Tensor src_cont = this->is_contiguous() ? *this : this->contiguous();
 	std::vector<int> norm_axes = detail::normalize_axes(axes, static_cast<int>(shape_.size()));
 	std::vector<int> out_shape = detail::reduced_shape_from_axes(shape_, norm_axes, keepdim);
@@ -287,8 +314,17 @@ Tensor Tensor::min(const std::vector<int>& axes, bool keepdim) const
 
 Tensor Tensor::mean(const std::vector<int>& axes, bool keepdim)const
 {
-	// What: Computes the arithmetic mean over specified axes.
-	// Why: Frequently used in loss functions and normalization layers (like BatchNorm).
+/**
+ * @brief Calcule la moyenne arithmétique sur un ou plusieurs axes.
+ *
+ * @details
+ * Outil statisique indispensable pour la normalisation (BatchNorm, LayerNorm) et l'agrégation de la fonction Loss.
+ * Sous le capot, enchaîne un appel effectif à `sum(axes, keepdim)` puis divise globalement par le nombre d'éléments ciblés (`denom`). Cet agencement permet au graphe d'autograd d'exploiter élégamment la dérivée de `sum`.
+ *
+ * @param axes (std::vector<int>) Dimensions de réduction (ex: {0} pour le batch).
+ * @param keepdim (bool) Conserver la dimensionalité (ex: `1` sur les dimensions réduites).
+ * @return (Tensor) Tenseur de sous-moyennes spatiales/batchées.
+ */
 	std::vector<int> norm_axes = detail::normalize_axes(axes, static_cast<int>(shape_.size()));
 	float denom = 1.0f;
 	for ( int axis : norm_axes )
@@ -298,8 +334,17 @@ Tensor Tensor::mean(const std::vector<int>& axes, bool keepdim)const
 
 Tensor Tensor::var(const std::vector<int>& axes, bool keepdim) const
 {
-	// What: Computes the variance over specified axes using the mean.
-	// Why: Essential for normalization layers to standardize activations.
+/**
+ * @brief Calcule la variance statistique sur des axes donnés.
+ *
+ * @details
+ * Complète la moyenne pour finaliser le centrage-réduction d'un flot d'activations.
+ * Calcule la déviation standardisée `((x - mean)^2).mean()`. L'ensemble de la passe est constitué de noeuds tensoriels standard de sorte que l'autograd dérive nativement les calculs de la variance sur un graphe implicite.
+ *
+ * @param axes (std::vector<int>) Dimensions de réduction ciblées.
+ * @param keepdim (bool) Préserve le layout spatial du tenseur sur la taille finale.
+ * @return (Tensor) Variances locales, ou globales si tous les axes sont donnés.
+ */
 	std::vector<int> norm_axes = detail::normalize_axes(axes, static_cast<int>(shape_.size()));
 	Tensor m = this->mean(norm_axes, true);
 	Tensor centered = *this - m;

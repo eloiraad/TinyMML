@@ -68,10 +68,21 @@ class Layer(ABC):
 #* --- Linear Layer Class --- *
 class Linear(Layer):
 	"""
-	What: Applies a linear transformation y = xW + b.
-	Why: Core building block for fully connected networks.
+	[brief] Applique une transformation linéaire aux données entrantes : y = xW^T + b.
+
+	[details]
+	Construit les couches denses (fully connected) fondamentales dans les réseaux de neurones.
+	Implémente la multiplication matricielle de l'entrée avec des poids apprenables, optionnellement suivie d'une addition de biais.
+
+	Args:
+		out_features (int): Taille de chaque échantillon de sortie.
+		bias (bool): Si True, ajoute un biais apprenable de dimension [1, out_features].
+		init (str): Méthode d'initialisation des poids ("xavier" ou "he").
+
+	Returns:
+		Tensor: [..., out_features] Tensor transformé lors du forward.
 	"""
-	def __init__(self, out_features: int, bias: bool = True, init: str = "default"):
+	def __init__(self, out_features: int, bias: bool = True, init: str = "xavier"):
 		super().__init__()
 		self.out_features = out_features
 		self.use_bias = bias
@@ -114,8 +125,17 @@ class Linear(Layer):
 #* --- SoftMax Layer Class --- *
 class Softmax(Layer):
 	"""
-	What: Applies the Softmax function over a specified axis.
-	Why: Converts logits to probabilities for classification.
+	[brief] Applique la fonction Softmax sur un axe spécifique.
+
+	[details]
+	Normalise les scores (logits) pour générer une distribution de probabilité.
+	Stabilisé numériquement en soustrayant le maximum de l'axe avant l'exponentiation pour éviter l'overflow.
+
+	Args:
+		axis (int): L'axe le long duquel appliquer Softmax (par défaut -1).
+
+	Returns:
+		Tensor: [Mêmes dimensions] Valeurs comprises entre 0 et 1, sommant à 1.
 	"""
 	def __init__(self, axis: int = -1):
 		super().__init__()
@@ -144,8 +164,17 @@ class Softmax(Layer):
 #* --- ReLU --- *
 class ReLU(Layer):
 	"""
-	What: Applies the Rectified Linear Unit function element-wise.
-	Why: Introduces non-linearity to the network.
+	[brief] Applique la fonction Rectified Linear Unit (ReLU) élément par élément.
+
+	[details]
+	Introduit de la non-linéarité dans le réseau pour apprendre des motifs complexes.
+	Remplace toutes les valeurs négatives par zéro in-place ou via copie selon l'implémentation du tenseur (max(0, x)).
+
+	Args:
+		Aucun paramètre d'initialisation.
+
+	Returns:
+		Tensor: [Mêmes dimensions] Tenseur activé.
 	"""
 	def _build(self, input_shape):
 		return input_shape
@@ -159,10 +188,17 @@ class ReLU(Layer):
 #* --- Dropout Layer Class --- *
 class Dropout(Layer):
 	"""
-	What: Inverted Dropout: during training, randomly zeroes elements with
-	probability `rate` and scales survivors by 1/(1-rate).
-	Why: Regularization technique to prevent overfitting. Acts as identity in eval.
-	Uses Tensor.bernoulli (C++ std::bernoulli_distribution) — no NumPy.
+	[brief] Inactive aléatoirement un pourcentage des neurones d'entrée.
+
+	[details]
+	Technique de régularisation efficace qui prévient la co-adaptation et freine le sur-apprentissage.
+	Applique un "Inverted Dropout" : les neurones conservés sont amplifiés par (1 / (1-rate)) pour que l'échelle des valeurs au test reste identique. Le masque est généré par `Tensor.bernoulli`.
+
+	Args:
+		rate (float): Probabilité (entre 0.0 et 1.0) de mise à zéro.
+
+	Returns:
+		Tensor: [Mêmes dimensions] Tenseur avec masque appliqué.
 	"""
 
 	def __init__(self, rate: float = 0.5):
@@ -190,16 +226,25 @@ class Dropout(Layer):
 #* --- Conv2D Layer Class --- *
 class Conv2D(Layer):
 	"""
-	What: 2D convolution via im2col + GEMM.
-	Input:  [B, C_in,  H,     W]
-	Output: [B, C_out, H_out, W_out]
-	Why: Core layer for spatial feature extraction in images.
-	Uses the C++ Tensor.im2col for patch extraction (CPU + CUDA).
+	[brief] Applique une convolution spatiale 2D sur un tenseur d'entrée paramétré.
+
+	[details]
+	Module de base des réseaux convolutifs utilisé pour l'extraction de caractéristiques locales.
+	Utilise `im2col` pour extraire des patchs, les transpose, puis calcule le résultat via une unique multiplication matricielle.
+
+	Args:
+		out_channels (int): Nombre de filtres produits en sortie.
+		kernel_size (int): Taille du noyau (carré de kernel_size x kernel_size).
+		stride (int): Pas de la fenêtre de balayage.
+		padding (int): Nombre de zéros artificiels ajoutés bord à bord.
+		bias (bool): Si True, inclut un biais indépendant [1, out_channels, 1, 1].
+		init (str): Méthode d'initialisation ("xavier" ou "he").
+
+	Returns:
+		Tensor: [B, out_channels, H_out, W_out] Cartes de caractéristiques convoluées.
 	"""
 
-	def __init__(self, out_channels: int, kernel_size: int,
-	             stride: int = 1, padding: int = 0,
-	             bias: bool = True, init: str = "default"):
+	def __init__(self, out_channels: int, kernel_size: int, stride: int = 1, padding: int = 0, bias: bool = True, init: str = "xavier"):
 		super().__init__()
 		self.out_channels = out_channels
 		self.kernel_size = kernel_size
@@ -264,10 +309,18 @@ class Conv2D(Layer):
 #* --- BatchNorm Layer Class --- *
 class BatchNorm(Layer):
 	"""
-	What: Batch Normalisation over axis 0 (batch dimension).
-	Input:  [B, features, ...] → normalises per feature across the batch.
-	Why: Stabilizes deep networks by normalizing inputs.
-	Running statistics updated with exponential moving average during training.
+	[brief] Normalise indépendamment le batch sur la dimension des caractéristiques.
+
+	[details]
+	Accélère et stabilise l'entraînement des réseaux profonds en réduisant le déplacement de covariable interne.
+	Calcule la moyenne et la variance sur l'axe 0. Le buffer de statistiques est mis à jour discrètement (détaché du graphe) via un EMA.
+
+	Args:
+		eps (float): Valeur minimale ajoutée à la variance pour la stabilité numérique.
+		momentum (float): Constante pour l'ajustement exponentiel des statistiques.
+
+	Returns:
+		Tensor: [B, features, ...] Tenseur recalibré par gamma et beta.
 	"""
 
 	def __init__(self, eps: float = 1e-5, momentum: float = 0.1):
@@ -301,9 +354,6 @@ class BatchNorm(Layer):
 
 			x_hat = (x - mean) / (var + self.eps).sqrt()
 
-			# What: Update running stats via NumPy buffers.
-			# Why: Detaches the assignment from the C++ autograd graph, 
-			#      preventing massive memory leaks across epochs.
 			m = self.momentum
 			rm_np = np.asarray(self.running_mean)
 			rv_np = np.asarray(self.running_var)
@@ -321,10 +371,17 @@ class BatchNorm(Layer):
 #* --- LayerNorm Layer Class --- *
 class LayerNorm(Layer):
 	"""
-	What: Layer Normalisation over the last dimension.
-	Input:  [..., features] → normalises each sample independently.
-	Why: Normalization suitable for sequence models (like Transformers).
-	Learnable affine: gamma and beta of shape [1, features].
+	[brief] Normalise individuellement chaque échantillon sur sa dernière dimension.
+
+	[details]
+	Pallie les limites de BatchNorm sur les mini-batch ou les architectures séquentielles type Transformers.
+	Calcule la moyenne et la variance exclusivement sur le dernier axe.
+
+	Args:
+		eps (float): Scalaire de stabilité numérique.
+
+	Returns:
+		Tensor: [..., features] Entrées normalisées.
 	"""
 
 	def __init__(self, eps: float = 1e-5):
@@ -357,13 +414,20 @@ class LayerNorm(Layer):
 		return [self.gamma, self.beta]
 
 
-#* --- ResidualBlock (Skip Connection) --- *
+#* --- ResidualBlock --- *
 class ResidualBlock(Layer):
 	"""
-	What: Wraps a sequence of sub‑layers and adds a skip connection: 
-	      forward(x) = x + sublayers(x)
-	Why: Prevents vanishing gradients in deep networks by establishing direct paths.
-	The sub‑layers must preserve the tensor shape so that addition is valid.
+	[brief] Implémente une architecture de connexion résiduelle (Skip Connection).
+
+	[details]
+	Prévient la disparition du gradient dans les réseaux profonds en ajoutant le signal d'origine à la sortie.
+	Propage l'entrée dans une suite de 'sub_layers', puis additionne son résultat à l'entrée d'origine (y = x + F(x)).
+
+	Args:
+		*layers (Layer): Séquence d'objets Layer constituant la transformation F(x).
+
+	Returns:
+		Tensor: [Mêmes dimensions] Résultat final additionné.
 	"""
 
 	def __init__(self, *layers):

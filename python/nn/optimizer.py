@@ -4,28 +4,49 @@ import numpy as np
 import cvmml_api as cvmml
 
 class Optimizer(ABC):
-	"""Abstract base class for all optimizers."""
+	"""
+	[brief] Classe de base abstraite pour tous les optimiseurs de gradients.
+
+	[details]
+	Définit l'interface commune et stocke les paramètres à optimiser pour faciliter le polymorphisme.
+	Gère la liste des paramètres modifiables du modèle et fournit la méthode universelle `zero_grad()` pour effacer les gradients avant chaque itération d'entraînement.
+
+	Args:
+		parameters (List): Liste des objets `cvmml.Tensor` (paramètres du modèle).
+		lr (float): Taux d'apprentissage de base.
+
+	Returns:
+		Aucun retour pour l'initialisation.
+	"""
 	def __init__(self, parameters: List, lr: float):
 		self.parameters = list(parameters)
 		self.lr = lr
 
 	def zero_grad(self):
-		"""Reset all parameter gradients to zero."""
 		for param in self.parameters:
 			param.zero_grad()
 
 	@abstractmethod
 	def step(self):
-		"""Apply one optimization step."""
 		pass
 
 
 class SGD(Optimizer):
 	"""
-	Stochastic Gradient Descent optimizer.
+	[brief] Optimiseur par Descente de Gradient Stochastique (Stochastic Gradient Descent).
 
-	Includes support for momentum and weight decay.
-	Uses tensor in-place operations (subtract_) to update parameters.
+	[details]
+	Met à jour les poids pour minimiser l'erreur selon la direction du gradient avec support de l'inertie (momentum).
+	Soustrait à chaque paramètre la valeur de son gradient (pondéré par `lr`). Utilise des arrays `numpy` internes pour calculer les inerties sans allouer de nouveaux Tensors. Les opérations de mise à jour s'effectuent via `.subtract_()` (in-place) pour rester sur le device (C++ / CUDA) et éviter l'explosion de l'autograd.
+
+	Args:
+		parameters (List): Paramètres à optimiser.
+		lr (float): Taux d'apprentissage.
+		momentum (float): Constante d'inertie accélérant la descente dans les directions constantes.
+		weight_decay (float): Pénalité L2 pour régulariser les poids.
+
+	Returns:
+		Aucun retour. `step()` met à jour les tenseurs en-place.
 	"""
 	def __init__(self, parameters: List, lr: float = 0.01, momentum: float = 0.0, weight_decay: float = 0.0):
 		super().__init__(parameters, lr)
@@ -57,9 +78,22 @@ class SGD(Optimizer):
 
 class Adam(Optimizer):
 	"""
-	Adam optimizer.
-	
-	Implements the Adam algorithm with weight decay.
+	[brief] Optimiseur Adaptive Moment Estimation (Adam).
+
+	[details]
+	Ajuste individuellement le taux d'apprentissage de chaque paramètre, offrant une convergence très rapide et robuste.
+	Calcule des estimations glissantes du premier moment (moyenne locale du gradient) et du second moment (variance locale non centrée), avec correction de biais selon l'itération `t`. Les buffers modifiés (arrays numpy) s'appliquent sur les `Tensor` in-place.
+
+	Args:
+		parameters (List): Paramètres à optimiser.
+		lr (float): Taux d'apprentissage asymptotique maximum.
+		beta1 (float): Taux de décroissance pour le premier moment (momentum).
+		beta2 (float): Taux de décroissance pour le second moment (RMSprop).
+		eps (float): Terme de stabilité pour diviser sans erreur par zéro.
+		weight_decay (float): Pénalité de régularisation L2.
+
+	Returns:
+		Aucun retour. `step()` met à jour les poids in-place.
 	"""
 	def __init__(self, parameters: List, lr: float = 0.001, beta1: float = 0.9, beta2: float = 0.999, eps: float = 1e-8, weight_decay: float = 0.0):
 		super().__init__(parameters, lr)

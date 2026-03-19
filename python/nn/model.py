@@ -7,8 +7,17 @@ from .layer import Layer
 #* --- Abstract Class --- *
 class Model(Layer):
 	"""
-	What: Main sequential container for neural network layers.
-	Why: Aggregates sub-layers, manages their build lifecycle, and chains their forward passes.
+	[brief] Conteneur séquentiel maître pour structurer un modèle de Deep Learning.
+
+	[details]
+	Regroupe la modularité, stocke récursivement les paramètres, et propage les données.
+	Délègue l'exécution à chaque sous-couche successivement via une simple boucle `for layer in self.layers`. Induit automatiquement la dimensionnalité (`build`) lors du premier appel.
+
+	Args:
+		layers (Optional[Iterable[Layer]]): Liste ordonnée de couches à exécuter consécutivement.
+
+	Returns:
+		Tensor: [Dimensions sortantes] Résultat complet du traitement réseau.
 	"""
 	def __init__(self, layers: Optional[Iterable[Layer]] = None) -> None:
 		super().__init__()
