@@ -281,7 +281,9 @@ void free_int_memory(int* ptr)
 void set_memory(float* ptr, float val, int size)
 {
 	if ( val == 0.0f )
+	{
 		CHECK_CUDA(cudaMemset(ptr, 0, size * sizeof(float)));
+	}
 	else
 	{
 		dim3 blockSize, gridSize;

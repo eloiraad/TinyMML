@@ -81,7 +81,7 @@ void Tensor::backward()
 	build_topo(*this);
 	for ( auto it = topo.rbegin(); it != topo.rend(); ++it )
 		if ( it->backward_fn_ )
-			it->backward_fn_();
+			it->backward_fn_(*it);
 }
 
 } // namespace core

@@ -42,8 +42,10 @@ Tensor Tensor::operator+(const Tensor& rhs) const
 		Tensor parentB = rhs;
 		std::vector<int> out_shape_local = out_shape;
 		result.parents_ = {parentA, parentB};
-		result.backward_fn_ = [parentA, parentB, result, out_shape_local]() mutable
+		result.backward_fn_ = [out_shape_local](const Tensor& result) mutable
 		{
+			const Tensor& parentA = result.parents_[0];
+			const Tensor& parentB = result.parents_[1];
 			float* grad_out = result.grad();
 			int out_size = static_cast<int>(detail::product_of(out_shape_local));
 			if ( parentA.requires_grad_ )
@@ -111,8 +113,10 @@ Tensor Tensor::operator-(const Tensor& rhs) const
 		Tensor parentB = rhs;
 		std::vector<int> out_shape_local = out_shape;
 		result.parents_ = {parentA, parentB};
-		result.backward_fn_ = [parentA, parentB, result, out_shape_local]() mutable
+		result.backward_fn_ = [out_shape_local](const Tensor& result) mutable
 		{
+			const Tensor& parentA = result.parents_[0];
+			const Tensor& parentB = result.parents_[1];
 			float* grad_out = result.grad();
 			int out_size = static_cast<int>(detail::product_of(out_shape_local));
 			if ( parentA.requires_grad_ )
@@ -180,8 +184,12 @@ Tensor Tensor::operator*(const Tensor& rhs) const
 		Tensor parentB = rhs;
 		std::vector<int> out_shape_local = out_shape;
 		result.parents_ = {parentA, parentB};
-		result.backward_fn_ = [parentA, parentB, result, lhs_host, rhs_host, out_shape_local]() mutable
+		result.backward_fn_ = [out_shape_local](const Tensor& result) mutable
 		{
+			const Tensor& parentA = result.parents_[0];
+			const Tensor& parentB = result.parents_[1];
+			Tensor pA_host = (parentA.device() == Device::CUDA) ? parentA.to_cpu() : parentA;
+			Tensor pB_host = (parentB.device() == Device::CUDA) ? parentB.to_cpu() : parentB;
 			float* grad_out = result.grad();
 			int out_size = static_cast<int>(detail::product_of(out_shape_local));
 			if ( parentA.requires_grad_ )
@@ -191,8 +199,8 @@ Tensor Tensor::operator*(const Tensor& rhs) const
 				{
 					std::vector<int> out_coords = detail::unravel_index(i, out_shape_local);
 					int64_t ia = detail::linear_for_broadcast_operand(out_coords, parentA.shape(), detail::make_contiguous_strides(parentA.shape()));
-					int64_t ib = detail::linear_for_broadcast_operand(out_coords, rhs_host.shape(), rhs_host.strides());
-					grad_a[ia] += grad_out[i] * rhs_host.data()[ib];
+					int64_t ib = detail::linear_for_broadcast_operand(out_coords, pB_host.shape(), pB_host.strides());
+					grad_a[ia] += grad_out[i] * pB_host.data()[ib];
 				}
 				if ( parentA.device() == Device::CUDA )
 					cuda::copy_to_device(parentA.device_grad(), grad_a, parentA.size());
@@ -204,8 +212,8 @@ Tensor Tensor::operator*(const Tensor& rhs) const
 				{
 					std::vector<int> out_coords = detail::unravel_index(i, out_shape_local);
 					int64_t ib = detail::linear_for_broadcast_operand(out_coords, parentB.shape(), detail::make_contiguous_strides(parentB.shape()));
-					int64_t ia = detail::linear_for_broadcast_operand(out_coords, lhs_host.shape(), lhs_host.strides());
-					grad_b[ib] += grad_out[i] * lhs_host.data()[ia];
+					int64_t ia = detail::linear_for_broadcast_operand(out_coords, pA_host.shape(), pA_host.strides());
+					grad_b[ib] += grad_out[i] * pA_host.data()[ia];
 				}
 				if ( parentB.device() == Device::CUDA )
 					cuda::copy_to_device(parentB.device_grad(), grad_b, parentB.size());
@@ -251,8 +259,12 @@ Tensor Tensor::operator/(const Tensor& rhs) const
 		Tensor parentB = rhs;
 		std::vector<int> out_shape_local = out_shape;
 		result.parents_ = {parentA, parentB};
-		result.backward_fn_ = [parentA, parentB, result, lhs_host, rhs_host, out_shape_local]() mutable
+		result.backward_fn_ = [out_shape_local](const Tensor& result) mutable
 		{
+			const Tensor& parentA = result.parents_[0];
+			const Tensor& parentB = result.parents_[1];
+			Tensor pA_host = (parentA.device() == Device::CUDA) ? parentA.to_cpu() : parentA;
+			Tensor pB_host = (parentB.device() == Device::CUDA) ? parentB.to_cpu() : parentB;
 			float* grad_out = result.grad();
 			int out_size = static_cast<int>(detail::product_of(out_shape_local));
 			if ( parentA.requires_grad_ )
@@ -262,8 +274,8 @@ Tensor Tensor::operator/(const Tensor& rhs) const
 				{
 					std::vector<int> out_coords = detail::unravel_index(i, out_shape_local);
 					int64_t ia = detail::linear_for_broadcast_operand(out_coords, parentA.shape(), detail::make_contiguous_strides(parentA.shape()));
-					int64_t ib = detail::linear_for_broadcast_operand(out_coords, rhs_host.shape(), rhs_host.strides());
-					grad_a[ia] += grad_out[i] / rhs_host.data()[ib];
+					int64_t ib = detail::linear_for_broadcast_operand(out_coords, pB_host.shape(), pB_host.strides());
+					grad_a[ia] += grad_out[i] / pB_host.data()[ib];
 				}
 				if ( parentA.device() == Device::CUDA )
 					cuda::copy_to_device(parentA.device_grad(), grad_a, parentA.size());
@@ -275,9 +287,9 @@ Tensor Tensor::operator/(const Tensor& rhs) const
 				{
 					std::vector<int> out_coords = detail::unravel_index(i, out_shape_local);
 					int64_t ib = detail::linear_for_broadcast_operand(out_coords, parentB.shape(), detail::make_contiguous_strides(parentB.shape()));
-					int64_t ia = detail::linear_for_broadcast_operand(out_coords, lhs_host.shape(), lhs_host.strides());
-					float denom = rhs_host.data()[ib] * rhs_host.data()[ib];
-					grad_b[ib] += grad_out[i] * (-lhs_host.data()[ia] / denom);
+					int64_t ia = detail::linear_for_broadcast_operand(out_coords, pA_host.shape(), pA_host.strides());
+					float denom = pB_host.data()[ib] * pB_host.data()[ib];
+					grad_b[ib] += grad_out[i] * (-pA_host.data()[ia] / denom);
 				}
 				if ( parentB.device() == Device::CUDA )
 					cuda::copy_to_device(parentB.device_grad(), grad_b, parentB.size());
@@ -305,8 +317,9 @@ Tensor Tensor::operator+(float scalar) const
 	{
 		Tensor parentA = *this;
 		result.parents_ = {parentA};
-		result.backward_fn_ = [parentA, result]() mutable
+		result.backward_fn_ = [](const Tensor& result) mutable
 		{
+			const Tensor& parentA = result.parents_[0];
 			if ( parentA.requires_grad_ )
 			{
 				if ( parentA.device() == Device::CUDA )
@@ -338,8 +351,9 @@ Tensor Tensor::operator-(float scalar) const
 	{
 		Tensor parentA = *this;
 		result.parents_ = {parentA};
-		result.backward_fn_ = [parentA, result]() mutable
+		result.backward_fn_ = [](const Tensor& result) mutable
 		{
+			const Tensor& parentA = result.parents_[0];
 			if ( parentA.requires_grad_ )
 			{
 				if ( parentA.device() == Device::CUDA )
@@ -371,8 +385,9 @@ Tensor Tensor::operator*(float scalar) const
 	{
 		Tensor parentA = *this;
 		result.parents_ = {parentA};
-		result.backward_fn_ = [parentA, result, scalar]() mutable
+		result.backward_fn_ = [scalar](const Tensor& result) mutable
 		{
+			const Tensor& parentA = result.parents_[0];
 			if ( parentA.requires_grad_ )
 			{
 				if ( parentA.device() == Device::CUDA )
@@ -404,8 +419,9 @@ Tensor Tensor::operator/(float scalar) const
 	{
 		Tensor parentA = *this;
 		result.parents_ = {parentA};
-		result.backward_fn_ = [parentA, result, scalar]() mutable
+		result.backward_fn_ = [scalar](const Tensor& result) mutable
 		{
+			const Tensor& parentA = result.parents_[0];
 			if ( parentA.requires_grad_ )
 			{
 				if ( parentA.device() == Device::CUDA )
@@ -437,8 +453,9 @@ Tensor Tensor::exp() const
 	{
 		Tensor parentA = *this;
 		result.parents_ = {parentA};
-		result.backward_fn_ = [parentA, result]() mutable
+		result.backward_fn_ = [](const Tensor& result) mutable
 		{
+			const Tensor& parentA = result.parents_[0];
 			if ( parentA.requires_grad_ )
 			{
 				if ( parentA.device() == Device::CUDA )
@@ -470,8 +487,9 @@ Tensor Tensor::log() const
 	{
 		Tensor parentA = *this;
 		result.parents_ = {parentA};
-		result.backward_fn_ = [parentA, result]() mutable
+		result.backward_fn_ = [](const Tensor& result) mutable
 		{
+			const Tensor& parentA = result.parents_[0];
 			if ( parentA.requires_grad_ )
 			{
 				if ( parentA.device() == Device::CUDA )
@@ -504,8 +522,9 @@ Tensor Tensor::relu() const
 	{
 		Tensor parent = *this;
 		result.parents_ = {parent};
-		result.backward_fn_ = [parent, result]() mutable
+		result.backward_fn_ = [](const Tensor& result) mutable
 		{
+			const Tensor& parent = result.parents_[0];
 			if ( !parent.requires_grad_ )
 				return; //? Inutile ?
 			if ( parent.device() == Device::CUDA )
@@ -542,8 +561,9 @@ Tensor Tensor::sqrt() const
 	{
 		Tensor parent = *this;
 		result.parents_ = {parent};
-		result.backward_fn_ = [parent, result]() mutable
+		result.backward_fn_ = [](const Tensor& result) mutable
 		{
+			const Tensor& parent = result.parents_[0];
 			if ( !parent.requires_grad_ )
 				return;
 			if ( parent.device() == Device::CUDA )

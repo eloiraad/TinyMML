@@ -138,7 +138,7 @@ Tensor Tensor::view(const std::vector<int>& new_shape) const
 	out.grad_.reset();
 	out.device_grad_.reset();
 	out.parents_.clear();
-	out.backward_fn_ = std::function<void()>();
+	out.backward_fn_ = std::function<void(const Tensor&)>();
 	return out;
 }
 

@@ -112,8 +112,10 @@ Tensor Tensor::matmult(const Tensor& rhs) const
 		Tensor parentA = *this;
 		Tensor parentB = rhs;
 		result.parents_ = {parentA, parentB};
-		result.backward_fn_ = [parentA, parentB, result, M, K, N, lhs_batch_shape, rhs_batch_shape, out_batch_shape]() mutable
+		result.backward_fn_ = [M, K, N, lhs_batch_shape, rhs_batch_shape, out_batch_shape](const Tensor& result) mutable
 		{
+			const Tensor& parentA = result.parents_[0];
+			const Tensor& parentB = result.parents_[1];
 			int64_t batch_count_local = out_batch_shape.empty() ? 1 : detail::product_of(out_batch_shape);
 			int64_t lhs_matrix_size_local = static_cast<int64_t>(M) * K;
 			int64_t rhs_matrix_size_local = static_cast<int64_t>(K) * N;
@@ -228,7 +230,7 @@ Tensor Tensor::transpose(int dim0, int dim1) const
 	tr.grad_.reset();
 	tr.device_grad_.reset();
 	tr.parents_.clear();
-	tr.backward_fn_ = std::function<void()>();
+	tr.backward_fn_ = std::function<void(const Tensor&)>();
 
 	tr.set_requires_grad(this->requires_grad_);
 	if ( tr.requires_grad_ )
@@ -236,8 +238,9 @@ Tensor Tensor::transpose(int dim0, int dim1) const
 		Tensor parent = *this;
 		std::vector<int> parent_shape = shape_;
 		tr.parents_ = {parent};
-		tr.backward_fn_ = [parent, tr, parent_shape, dim0, dim1]() mutable
+		tr.backward_fn_ = [parent_shape, dim0, dim1](const Tensor& tr) mutable
 		{
+			const Tensor& parent = tr.parents_[0];
 			if ( !parent.requires_grad_ )
 				return;
 

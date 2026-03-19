@@ -74,8 +74,9 @@ Tensor Tensor::sum(const std::vector<int>& axes, bool keepdim) const
 		std::vector<int> axes_local = norm_axes;
 		std::vector<int> out_shape_local = out_shape;
 		result.parents_ = {parent};
-		result.backward_fn_ = [parent, result, parent_shape, axes_local, out_shape_local, keepdim]() mutable
+		result.backward_fn_ = [parent_shape, axes_local, out_shape_local, keepdim](const Tensor& result) mutable
 		{
+			const Tensor& parent = result.parents_[0];
 			if ( !parent.requires_grad_ )
 				return;
 
@@ -180,8 +181,9 @@ Tensor Tensor::max(const std::vector<int>& axes, bool keepdim) const
 		Tensor parent = *this;
 		std::vector<int> argmax_local = argmax;
 		result.parents_ = {parent};
-		result.backward_fn_ = [parent, result, argmax_local, argmax_device]() mutable
+		result.backward_fn_ = [argmax_local, argmax_device](const Tensor& result) mutable
 		{
+			const Tensor& parent = result.parents_[0];
 			if ( !parent.requires_grad_ )
 				return;
 
@@ -284,8 +286,9 @@ Tensor Tensor::min(const std::vector<int>& axes, bool keepdim) const
 		Tensor parent = *this;
 		std::vector<int> argmin_local = argmin;
 		result.parents_ = {parent};
-		result.backward_fn_ = [parent, result, argmin_local, argmin_device]() mutable
+		result.backward_fn_ = [argmin_local, argmin_device](const Tensor& result) mutable
 		{
+			const Tensor& parent = result.parents_[0];
 			if ( !parent.requires_grad_ )
 				return;
 

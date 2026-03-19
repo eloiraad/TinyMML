@@ -54,7 +54,7 @@ class SGD(Optimizer):
 		self.weight_decay = weight_decay
 		self.velocities = []
 		for p in self.parameters:
-			self.velocities.append(np.zeros(p.size(), dtype=np.float32))
+			self.velocities.append(np.zeros(p.shape(), dtype=np.float32))
 
 	def step(self):
 		for idx, param in enumerate(self.parameters):
@@ -64,7 +64,7 @@ class SGD(Optimizer):
 
 			g = np.array(grad, dtype=np.float32, copy=False)
 			if self.weight_decay != 0.0:
-				g += self.weight_decay * np.asarray(param).flatten()
+				g += self.weight_decay * np.asarray(param)
 			if self.momentum != 0.0:
 				self.velocities[idx] = self.momentum * self.velocities[idx] + g
 				g = self.velocities[idx]
@@ -105,8 +105,8 @@ class Adam(Optimizer):
 		self.m = []
 		self.v = []
 		for p in self.parameters:
-			self.m.append(np.zeros(p.size(), dtype=np.float32))
-			self.v.append(np.zeros(p.size(), dtype=np.float32))
+			self.m.append(np.zeros(p.shape(), dtype=np.float32))
+			self.v.append(np.zeros(p.shape(), dtype=np.float32))
 
 	def step(self):
 		self.t += 1
@@ -117,7 +117,7 @@ class Adam(Optimizer):
 
 			g = np.array(grad, dtype=np.float32, copy=False)
 			if self.weight_decay != 0.0:
-				g += self.weight_decay * np.asarray(param).flatten()
+				g += self.weight_decay * np.asarray(param)
 
 			self.m[idx] = self.beta1 * self.m[idx] + (1.0 - self.beta1) * g
 			self.v[idx] = self.beta2 * self.v[idx] + (1.0 - self.beta2) * (g ** 2)

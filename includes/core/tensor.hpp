@@ -40,7 +40,7 @@ class Tensor {
 		std::shared_ptr<float[]> grad_;
 		std::shared_ptr<float[]> device_grad_;
 		std::vector<Tensor> parents_;
-		std::function<void()> backward_fn_;
+		std::function<void(const Tensor&)> backward_fn_;
 
 	public:
 		Tensor( const std::vector<int>& shape );
