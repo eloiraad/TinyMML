@@ -3,6 +3,3 @@
 .vscode/
 build/
 data/
-python/nn/__pycache__/
-python/cvmml_api.cpython-312-x86_64-linux-gnu.so
-GEMINI.md

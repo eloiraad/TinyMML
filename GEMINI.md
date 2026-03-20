@@ -21,21 +21,21 @@ Le projet est divisé en modules fonctionnels :
 
 ```plaintext
 /
-├── CMakeLists.txt
 ├── .venv/                # Environnement virtuel Python sur lequel on travaille
 ├── GEMINI.md             # Ce fichier (contexte et rôle)
 ├── RoadMap.md            # Suivi précis de la progression
 ├── .gitignore            # Fichiers à ignorer par git (build, __pycache__, etc.)
 ├── data/                 # Dossier pour les datasets (MNIST, CIFAR)
-├── includes/             # Headers (.h, .hpp, .cuh)
-│   └── core/             # Tenseurs, kernels de base et autograd (Attention: 'cvmml/' a été aplati avec la refonte en incluant core/ directement)
-├── sources/              # Implémentations (.cpp, .cu)
-│   ├── core/             # Répartition par domaines (tensor_memory, ops_elementwise, autograd)
-│   │   ├── cuda/         # Kernels d'accélération dédiés
-│   │   └── tensor/       # Logique CPU et gestion de mémoire
-│   └── api/              # Interface Pybind11
-│       └── bindings.cpp  # Point d'entrée des bindings
-├── python/               # Package Python `cvmml` et tests d'expérimentation contenant `nn/` (layers, optimizers, models)
+├── tinytensor/           # Moteur C++ de calcul tensoriel et interface d'accélération
+│   ├── CMakeLists.txt
+│   ├── includes/         # Headers C++ et CUDA
+│   └── sources/          # Implémentations C++ (core et bindings api)
+├── tinymodel/            # Package Python `tinymodel` contenant `nn/` (layers, optimizers, models)
+│   ├── __init__.py       # Module entry
+│   └── nn/               # Dossier des modèles
+├── build.sh              # Script pour compiler tinytensor facilement
+├── requirements.txt      # Dépendances Python (numpy, etc.)
+├── test_*.py             # Scripts de tests d'expérimentation
 ```
 
 ## 4. Mon Rôle et Workflow
