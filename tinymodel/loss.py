@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-import cvmml_api as cvmml
+import tinytensor as tt
 
 
 class LossFunction(ABC):

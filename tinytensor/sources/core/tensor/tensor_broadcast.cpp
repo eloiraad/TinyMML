@@ -1,7 +1,7 @@
-#include "core/tensor_detail.hpp"
+#include "tensor_detail.hpp"
 #include <algorithm>
 
-namespace cvmml {
+namespace tinytensor {
 namespace core {
 namespace detail {
 
@@ -188,4 +188,4 @@ void check_same_device(const Tensor& a, const Tensor& b)
 
 } // namespace detail
 } // namespace core
-} // namespace cvmml
+} // namespace tinytensor

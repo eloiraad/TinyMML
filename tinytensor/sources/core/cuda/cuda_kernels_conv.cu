@@ -1,7 +1,7 @@
-#include "core/cuda_kernels.cuh"
-#include "core/cuda_kernels_common.cuh"
+#include "cuda_kernels.cuh"
+#include "cuda_kernels_common.cuh"
 
-namespace cvmml {
+namespace tinytensor {
 namespace core {
 namespace cuda {
 
@@ -12,7 +12,7 @@ __global__ void im2col_kernel( const float* data_im, float* data_col, int channe
 	if ( idx >= total )
 		return;
 
-	int col_channels = channels * kH * kW;
+	// int col_channels = channels * kH * kW;
 	int hw_out = idx % (height_out * width_out);
 	int c_col  = idx / (height_out * width_out);
 
@@ -57,4 +57,4 @@ void im2col(const float* data_im, float* data_col, int batch, int channels, int 
 
 } // namespace cuda
 } // namespace core
-} // namespace cvmml
+} // namespace tinytensor

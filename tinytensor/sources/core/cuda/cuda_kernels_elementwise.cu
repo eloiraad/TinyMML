@@ -1,7 +1,7 @@
-#include "core/cuda_kernels.cuh"
-#include "core/cuda_kernels_common.cuh"
+#include "cuda_kernels.cuh"
+#include "cuda_kernels_common.cuh"
 
-namespace cvmml {
+namespace tinytensor {
 namespace core {
 namespace cuda {
 
@@ -313,4 +313,4 @@ void fill_ones(float* ptr, int size)
 
 } // namespace cuda
 } // namespace core
-} // namespace cvmml
+} // namespace tinytensor

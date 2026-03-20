@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import List, Optional
 import numpy as np
-import cvmml_api as cvmml
+import tinytensor as tt
 
 class Optimizer(ABC):
 	"""
@@ -69,10 +69,10 @@ class SGD(Optimizer):
 				self.velocities[idx] = self.momentum * self.velocities[idx] + g
 				g = self.velocities[idx]
 
-			grad_tensor = cvmml.Tensor(list(param.shape()))
+			grad_tensor = tt.Tensor(list(param.shape()))
 			np.asarray(grad_tensor)[:] = g.reshape(param.shape())
 			scaled = grad_tensor * self.lr
-			if param.device() == cvmml.Device.CUDA:
+			if param.device() == tt.Device.CUDA:
 				scaled = scaled.to_cuda()
 			param.subtract_(scaled)
 
@@ -127,10 +127,10 @@ class Adam(Optimizer):
 			
 			update = m_hat / (np.sqrt(v_hat) + self.eps)
 
-			grad_tensor = cvmml.Tensor(list(param.shape()))
+			grad_tensor = tt.Tensor(list(param.shape()))
 			np.asarray(grad_tensor)[:] = update.reshape(param.shape())
 
 			scaled = grad_tensor * self.lr
-			if param.device() == cvmml.Device.CUDA:
+			if param.device() == tt.Device.CUDA:
 				scaled = scaled.to_cuda()
 			param.subtract_(scaled)

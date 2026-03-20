@@ -1,11 +1,11 @@
 #ifndef CVMML_CORE_TENSOR_DETAIL_HPP
 #define CVMML_CORE_TENSOR_DETAIL_HPP
 
-#include "core/tensor.hpp"
+#include "tensor.hpp"
 #include <cstdint>
 #include <vector>
 
-namespace cvmml {
+namespace tinytensor {
 namespace core {
 namespace detail {
 
@@ -26,6 +26,6 @@ void check_same_device(const Tensor& a, const Tensor& b);
 
 } // namespace detail
 } // namespace core
-} // namespace cvmml
+} // namespace tinytensor
 
 #endif // CVMML_CORE_TENSOR_DETAIL_HPP

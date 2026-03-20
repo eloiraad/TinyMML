@@ -1,6 +1,6 @@
-#include "core/cuda_kernels.cuh"
-#include "core/tensor.hpp"
-#include "core/tensor_detail.hpp"
+#include "cuda_kernels.cuh"
+#include "tensor.hpp"
+#include "tensor_detail.hpp"
 
 #include <cstdint>
 #include <limits>
@@ -19,7 +19,7 @@ bool should_parallel_reduction(int64_t size)
 
 }
 
-namespace cvmml {
+namespace tinytensor {
 namespace core {
 
 Tensor Tensor::sum(const std::vector<int>& axes, bool keepdim) const
@@ -356,4 +356,4 @@ Tensor Tensor::var(const std::vector<int>& axes, bool keepdim) const
 }
 
 } // namespace core
-} // namespace cvmml
+} // namespace tinytensor

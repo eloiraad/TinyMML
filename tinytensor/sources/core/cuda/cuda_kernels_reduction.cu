@@ -1,12 +1,12 @@
-#include "core/cuda_kernels.cuh"
-#include "core/cuda_kernels_common.cuh"
+#include "cuda_kernels.cuh"
+#include "cuda_kernels_common.cuh"
 
 #include <climits>
 #include <cstdint>
 #include <limits>
 #include <math.h>
 
-namespace cvmml {
+namespace tinytensor {
 namespace core {
 namespace cuda {
 
@@ -252,4 +252,4 @@ void reduce_scatter_backward(const float* grad_out, float* grad_in, const int* a
 
 } // namespace cuda
 } // namespace core
-} // namespace cvmml
+} // namespace tinytensor

@@ -2,7 +2,7 @@ from __future__ import annotations
 import math
 import sys
 import numpy as np
-import cvmml_api as cvmml
+import tinytensor as tt
 from typing import Callable, Dict, Iterable, List, Optional, Tuple, Union
 from .layer import Layer
 
@@ -85,7 +85,7 @@ class Model(Layer):
 
 	# ─── Helpers internes ─────────────────────────────────────────
 
-	def _np_to_tensor(self, arr: np.ndarray) -> cvmml.Tensor:
+	def _np_to_tensor(self, arr: np.ndarray) -> tt.Tensor:
 		"""
 		[brief] Convertit un np.ndarray en Tensor sur le device du modèle.
 
@@ -100,7 +100,7 @@ class Model(Layer):
 			Tensor: Tensor sur le device du modèle.
 		"""
 		arr = np.ascontiguousarray(arr, dtype=np.float32)
-		t = cvmml.Tensor(list(arr.shape))
+		t = tt.Tensor(list(arr.shape))
 		np.asarray(t)[:] = arr
 		if self.device == "cuda":
 			t = t.to_cuda()
@@ -116,7 +116,7 @@ class Model(Layer):
 		Returns:
 			np.ndarray: Copie des données sur CPU.
 		"""
-		if t.device() == cvmml.Device.CUDA:
+		if t.device() == tt.Device.CUDA:
 			t = t.to_cpu()
 		return np.array(t, dtype=np.float32, copy=True)
 
@@ -372,12 +372,12 @@ class Model(Layer):
 			name = type(layer).__name__
 			if hasattr(layer, "weight") and layer.weight is not None:
 				w = layer.weight
-				if w.device() == cvmml.Device.CUDA:
+				if w.device() == tt.Device.CUDA:
 					w = w.to_cpu()
 				weights[f"{idx}_{name}_weight"] = np.array(w, dtype=np.float32, copy=True)
 			if hasattr(layer, "bias") and layer.bias is not None:
 				b = layer.bias
-				if b.device() == cvmml.Device.CUDA:
+				if b.device() == tt.Device.CUDA:
 					b = b.to_cpu()
 				weights[f"{idx}_{name}_bias"] = np.array(b, dtype=np.float32, copy=True)
 		return weights

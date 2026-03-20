@@ -6,7 +6,7 @@
 #include <string>
 #include <math.h>
 
-namespace cvmml {
+namespace tinytensor {
 namespace core {
 namespace cuda {
 
@@ -66,6 +66,6 @@ void im2col(const float* data_im, float* data_col,
 
 } // namespace cuda
 } // namespace core
-} // namespace cvmml
+} // namespace tinytensor
 
 #endif // CVMML_CORE_CUDA_KERNELS_CUH

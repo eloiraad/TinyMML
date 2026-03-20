@@ -1,4 +1,4 @@
-#include "core/tensor.hpp"
+#include "tensor.hpp"
 #include <cuda_runtime.h>
 
 #ifndef CHECK_CUDA
@@ -9,7 +9,7 @@
 }
 #endif
 
-namespace cvmml {
+namespace tinytensor {
 namespace core {
 
 Device Tensor::device() const
@@ -63,4 +63,4 @@ Tensor Tensor::to_cpu() const
 }
 
 } // namespace core
-} // namespace cvmml
+} // namespace tinytensor

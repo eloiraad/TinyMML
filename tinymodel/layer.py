@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import math
-import cvmml_api as cvmml
+import tinytensor as tt
 import numpy as np
 from abc import ABC, abstractmethod
 from typing import List
@@ -95,7 +95,7 @@ class Linear(Layer):
 			raise ValueError("Linear input shape must be [..., in_features]")
 		in_features = input_shape[-1]
 
-		self.weight = cvmml.Tensor.randn([in_features, self.out_features], 0.0, 1.0)
+		self.weight = tt.Tensor.randn([in_features, self.out_features], 0.0, 1.0)
 		if self.init == "he":
 			scale = math.sqrt(2.0 / in_features)
 		else:
@@ -104,7 +104,7 @@ class Linear(Layer):
 		self.weight.set_requires_grad(True)
 
 		if self.use_bias:
-			self.bias = cvmml.Tensor.zeros([1, self.out_features])
+			self.bias = tt.Tensor.zeros([1, self.out_features])
 			self.bias.set_requires_grad(True)
 
 		out_shape = list(input_shape)
@@ -214,8 +214,8 @@ class Dropout(Layer):
 		if not self._training or self.rate == 0.0:
 			return x
 		keep_prob = 1.0 - self.rate
-		mask = cvmml.Tensor.bernoulli(list(x.shape()), keep_prob)
-		if x.device() == cvmml.Device.CUDA:
+		mask = tt.Tensor.bernoulli(list(x.shape()), keep_prob)
+		if x.device() == tt.Device.CUDA:
 			mask = mask.to_cuda()
 		return (x * mask) * (1.0 / keep_prob)
 
@@ -268,7 +268,7 @@ class Conv2D(Layer):
 		W_out = (W + 2 * self.padding - kW) // self.stride + 1
 
 		fan_in = C_in * kH * kW
-		self.weight = cvmml.Tensor.randn([self.out_channels, fan_in], 0.0, 1.0)
+		self.weight = tt.Tensor.randn([self.out_channels, fan_in], 0.0, 1.0)
 		if self.init == "he":
 			scale = math.sqrt(2.0 / fan_in)
 		else:
@@ -277,7 +277,7 @@ class Conv2D(Layer):
 		self.weight.set_requires_grad(True)
 
 		if self.use_bias:
-			self.bias = cvmml.Tensor.zeros([1, self.out_channels, 1, 1])
+			self.bias = tt.Tensor.zeros([1, self.out_channels, 1, 1])
 			self.bias.set_requires_grad(True)
 
 		return [input_shape[0], self.out_channels, H_out, W_out]
@@ -337,13 +337,13 @@ class BatchNorm(Layer):
 			raise ValueError("BatchNorm expects at least 2‑D input [B, features, ...]")
 		features = input_shape[1]
 
-		self.gamma = cvmml.Tensor.ones([1, features])
+		self.gamma = tt.Tensor.ones([1, features])
 		self.gamma.set_requires_grad(True)
-		self.beta = cvmml.Tensor.zeros([1, features])
+		self.beta = tt.Tensor.zeros([1, features])
 		self.beta.set_requires_grad(True)
 
-		self.running_mean = cvmml.Tensor.zeros([1, features])
-		self.running_var = cvmml.Tensor.ones([1, features])
+		self.running_mean = tt.Tensor.zeros([1, features])
+		self.running_var = tt.Tensor.ones([1, features])
 
 		return input_shape
 
@@ -395,9 +395,9 @@ class LayerNorm(Layer):
 			raise ValueError("LayerNorm needs at least 1‑D input")
 		features = input_shape[-1]
 
-		self.gamma = cvmml.Tensor.ones([1, features])
+		self.gamma = tt.Tensor.ones([1, features])
 		self.gamma.set_requires_grad(True)
-		self.beta = cvmml.Tensor.zeros([1, features])
+		self.beta = tt.Tensor.zeros([1, features])
 		self.beta.set_requires_grad(True)
 
 		return input_shape

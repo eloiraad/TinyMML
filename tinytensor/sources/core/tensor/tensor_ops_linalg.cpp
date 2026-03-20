@@ -1,6 +1,6 @@
-#include "core/cuda_kernels.cuh"
-#include "core/tensor.hpp"
-#include "core/tensor_detail.hpp"
+#include "cuda_kernels.cuh"
+#include "tensor.hpp"
+#include "tensor_detail.hpp"
 
 #include <cstdint>
 
@@ -18,7 +18,7 @@ bool should_parallel_matmul(int64_t batch_count, int M, int K, int N)
 
 }
 
-namespace cvmml {
+namespace tinytensor {
 namespace core {
 
 Tensor Tensor::matmult(const Tensor& rhs) const
@@ -270,4 +270,4 @@ Tensor Tensor::transpose(int dim0, int dim1) const
 }
 
 } // namespace core
-} // namespace cvmml
+} // namespace tinytensor

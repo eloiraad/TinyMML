@@ -1,7 +1,7 @@
-#include "core/cuda_kernels.cuh"
-#include "core/cuda_kernels_common.cuh"
+#include "cuda_kernels.cuh"
+#include "cuda_kernels_common.cuh"
 
-namespace cvmml {
+namespace tinytensor {
 namespace core {
 namespace cuda {
 
@@ -126,4 +126,4 @@ void matmult_backward_B(const float* A, const float* grad_C, float* grad_B, int 
 
 } // namespace cuda
 } // namespace core
-} // namespace cvmml
+} // namespace tinytensor

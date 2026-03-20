@@ -2,12 +2,12 @@
 #include <pybind11/stl.h>
 #include <pybind11/operators.h>
 #include <pybind11/numpy.h>
-#include "core/tensor.hpp"
+#include "tensor.hpp"
 
 namespace py = pybind11;
-using namespace cvmml::core;
+using namespace tinytensor::core;
 
-PYBIND11_MODULE(cvmml_api, m)
+PYBIND11_MODULE(tinytensor, m)
 {
 	m.doc() = "CVMML: Computer Vision and Machine Learning Library C++ Engine";
 

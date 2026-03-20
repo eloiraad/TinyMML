@@ -1,11 +1,11 @@
-#include "core/cuda_kernels.cuh"
-#include "core/tensor.hpp"
+#include "cuda_kernels.cuh"
+#include "tensor.hpp"
 
 #include <functional>
 #include <set>
 #include <vector>
 
-namespace cvmml {
+namespace tinytensor {
 namespace core {
 
 bool Tensor::requires_grad() const
@@ -85,4 +85,4 @@ void Tensor::backward()
 }
 
 } // namespace core
-} // namespace cvmml
+} // namespace tinytensor

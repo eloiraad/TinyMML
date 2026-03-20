@@ -2,4 +2,7 @@
 .venv/
 .vscode/
 build/
+tinytensor/build/
+tinymodel/__pycache__/
+*.so
 data/

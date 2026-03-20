@@ -1,11 +1,11 @@
-#include "core/cuda_kernels.cuh"
-#include "core/tensor.hpp"
-#include "core/tensor_detail.hpp"
+#include "cuda_kernels.cuh"
+#include "tensor.hpp"
+#include "tensor_detail.hpp"
 
 #include <atomic>
 #include <random>
 
-namespace cvmml {
+namespace tinytensor {
 namespace core {
 
 static std::atomic<uint64_t> tensor_global_id{0};
@@ -219,4 +219,4 @@ Tensor Tensor::uniform(const std::vector<int>& shape)
 }
 
 } // namespace core
-} // namespace cvmml
+} // namespace tinytensor

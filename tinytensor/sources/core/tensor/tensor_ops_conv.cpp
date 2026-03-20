@@ -1,8 +1,8 @@
-#include "core/cuda_kernels.cuh"
-#include "core/tensor.hpp"
-#include "core/tensor_detail.hpp"
+#include "cuda_kernels.cuh"
+#include "tensor.hpp"
+#include "tensor_detail.hpp"
 
-namespace cvmml {
+namespace tinytensor {
 namespace core {
 
 Tensor Tensor::im2col(int kH, int kW, int stride, int pad) const
@@ -85,4 +85,4 @@ Tensor Tensor::im2col(int kH, int kW, int stride, int pad) const
 }
 
 } // namespace core
-} // namespace cvmml
+} // namespace tinytensor

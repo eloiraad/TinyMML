@@ -17,7 +17,7 @@
 #define CHECK_CUDA_LAUNCH() CHECK_CUDA(cudaPeekAtLastError())
 #endif
 
-namespace cvmml {
+namespace tinytensor {
 namespace core {
 namespace cuda {
 
@@ -29,6 +29,6 @@ inline void get_grid_1d(int size, dim3& blockSize, dim3& gridSize)
 
 } // namespace cuda
 } // namespace core
-} // namespace cvmml
+} // namespace tinytensor
 
 #endif // CVMML_CORE_CUDA_KERNELS_COMMON_CUH

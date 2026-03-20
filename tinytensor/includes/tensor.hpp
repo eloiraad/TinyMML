@@ -18,7 +18,7 @@ enum class Device
 	CUDA
 };
 
-namespace cvmml {
+namespace tinytensor {
 namespace core {
 
 class Tensor {
@@ -105,6 +105,6 @@ class Tensor {
 };
 
 } // namespace core
-} // namespace cvmml
+} // namespace tinytensor
 
 #endif // CVMML_CORE_TENSOR_HPP

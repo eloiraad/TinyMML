@@ -1,12 +1,13 @@
 import sys
+sys.path.insert(0, "..")
+sys.path.insert(0, ".") # Make sure tinymodel is accessible if run from python/
 import numpy as np
-import cvmml_api as C
+import tinytensor as C
 
-sys.path.insert(0, ".")
-from nn.model import Model
-from nn.layer import Linear, ReLU, Softmax
-from nn.optimizer import Adam
-from nn.loss import CrossEntropyLoss, MSELoss
+from tinymodel.model import Model
+from tinymodel.layer import Linear, ReLU, Softmax
+from tinymodel.optimizer import Adam
+from tinymodel.loss import CrossEntropyLoss, MSELoss
 
 def test_training_pipeline_classification():
     print("\n=== Testing Training Pipeline (Classification) ===")
@@ -102,6 +103,8 @@ def test_training_pipeline_regression():
     final_mae = history['metric'][-1]
     print(f"Final Regression MAE: {final_mae:.4f}")
     assert final_mae < 0.2, f"Failed to fit simple line, MAE={final_mae}"
+    if (final_mae < 0.2):
+        print(f"Failed to fit simple line, MAE={final_mae}")
 
 if __name__ == "__main__":
     test_training_pipeline_classification()
