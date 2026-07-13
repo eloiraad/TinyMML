@@ -2,6 +2,8 @@
 #include "tensor.hpp"
 #include "tensor_detail.hpp"
 
+#include <stdexcept>
+
 namespace tinytensor {
 namespace core {
 
@@ -40,6 +42,8 @@ Tensor Tensor::im2col(int kH, int kW, int stride, int pad) const
 
 	if ( device_ == Device::CUDA )
 	{
+		if ( requires_grad_ )
+			throw std::runtime_error("CUDA im2col backward is not implemented.");
 		result = result.to_cuda();
 		cuda::im2col(src.device_data(), result.device_data(), B, C, H, W, kH, kW, stride, pad, H_out, W_out);
 	}
@@ -80,6 +84,44 @@ Tensor Tensor::im2col(int kH, int kW, int stride, int pad) const
 				}
 			}
 		}
+	}
+
+	result.set_requires_grad(requires_grad_);
+	if ( result.requires_grad_ )
+	{
+		result.parents_ = {*this};
+		result.backward_fn_ = [B, C, H, W, kH, kW, stride, pad, H_out, W_out, col_channels](const Tensor& result)
+		{
+			const Tensor& parent = result.parents_[0];
+			const float* grad_col = result.grad();
+			float* grad_image = parent.grad();
+
+			#ifdef _OPENMP
+			#pragma omp parallel for
+			#endif
+			for ( int b = 0; b < B; ++b )
+			{
+				const float* grad_col_b = grad_col + b * col_channels * H_out * W_out;
+				float* grad_image_b = grad_image + b * C * H * W;
+				for ( int c = 0; c < C; ++c )
+					for ( int kh = 0; kh < kH; ++kh )
+						for ( int kw = 0; kw < kW; ++kw )
+						{
+							int col_row = c * kH * kW + kh * kW + kw;
+							for ( int oh = 0; oh < H_out; ++oh )
+								for ( int ow = 0; ow < W_out; ++ow )
+								{
+									int ih = oh * stride - pad + kh;
+									int iw = ow * stride - pad + kw;
+									if ( ih >= 0 && ih < H && iw >= 0 && iw < W )
+									{
+										int col_idx = col_row * (H_out * W_out) + oh * W_out + ow;
+										grad_image_b[c * H * W + ih * W + iw] += grad_col_b[col_idx];
+									}
+								}
+						}
+			}
+		};
 	}
 	return result;
 }

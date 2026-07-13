@@ -3,12 +3,27 @@
 #include "tensor_detail.hpp"
 
 #include <atomic>
+#include <cstddef>
+#include <functional>
+#include <memory>
 #include <random>
+#include <stdexcept>
+#include <vector>
 
 namespace tinytensor {
 namespace core {
 
 static std::atomic<uint64_t> tensor_global_id{0};
+
+namespace {
+
+std::mt19937& random_generator()
+{
+	static std::mt19937 generator(std::random_device{}());
+	return generator;
+}
+
+} // namespace
 
 Tensor::Tensor(const std::vector<int>& shape) : shape_(shape), total_size_(1), id_(++tensor_global_id)
 {
@@ -77,6 +92,16 @@ Tensor Tensor::contiguous() const
 		Tensor out(shape_);
 		out = out.to_cuda();
 		cuda::pack_strided_to_contiguous(device_data_.get(), out.device_data_.get(), shape_.data(), strides_.data(), static_cast<int>(shape_.size()), offset_, total_size_);
+		out.set_requires_grad(requires_grad_);
+		if ( out.requires_grad_ )
+		{
+			out.parents_ = {*this};
+			out.backward_fn_ = [](const Tensor& out)
+			{
+				const Tensor& parent = out.parents_[0];
+				cuda::add_arrays(parent.device_grad(), out.device_grad(), parent.device_grad(), parent.size());
+			};
+		}
 		return out;
 	}
 
@@ -92,6 +117,17 @@ Tensor Tensor::contiguous() const
 			source_index += idx * strides_[d];
 		}
 		out.data()[linear] = data_[source_index];
+	}
+	out.set_requires_grad(requires_grad_);
+	if ( out.requires_grad_ )
+	{
+		out.parents_ = {*this};
+		out.backward_fn_ = [](const Tensor& out)
+		{
+			const Tensor& parent = out.parents_[0];
+			for ( int linear = 0; linear < parent.size(); ++linear )
+				parent.grad()[linear] += out.grad()[linear];
+		};
 	}
 	return out;
 }
@@ -131,14 +167,29 @@ Tensor Tensor::view(const std::vector<int>& new_shape) const
 	if ( product != total_size_ )
 		throw std::invalid_argument("view() shape is incompatible with tensor size.");
 
-	Tensor out = *this;
-	out.shape_ = resolved_shape;
+	Tensor out(resolved_shape);
+	out.data_ = data_;
+	out.device_ = device_;
+	out.device_data_ = device_data_;
+	out.offset_ = offset_;
 	out.strides_ = detail::make_contiguous_strides(resolved_shape);
 	out.is_view_ = true;
-	out.grad_.reset();
-	out.device_grad_.reset();
-	out.parents_.clear();
-	out.backward_fn_ = std::function<void(const Tensor&)>();
+	out.set_requires_grad(requires_grad_);
+	if ( out.requires_grad_ )
+	{
+		out.parents_ = {*this};
+		out.backward_fn_ = [](const Tensor& out)
+		{
+			const Tensor& parent = out.parents_[0];
+			if ( parent.device() == Device::CUDA )
+			{
+				cuda::add_arrays(parent.device_grad(), out.device_grad(), parent.device_grad(), parent.size());
+				return;
+			}
+			for ( int linear = 0; linear < parent.size(); ++linear )
+				parent.grad()[linear] += out.grad()[linear];
+		};
+	}
 	return out;
 }
 
@@ -186,11 +237,9 @@ Tensor Tensor::ones(const std::vector<int>& shape)
 Tensor Tensor::randn(const std::vector<int>& shape, float mean, float std)
 {
 	Tensor t(shape);
-	std::random_device rd;
-	std::mt19937 gen(rd());
 	std::normal_distribution<float> d(mean, std);
 	for ( int i = 0; i < t.size(); ++i )
-		t.data()[i] = d(gen);
+		t.data()[i] = d(random_generator());
 	return t;
 }
 
@@ -199,23 +248,24 @@ Tensor Tensor::bernoulli(const std::vector<int>& shape, float p)
 	if ( p < 0.0f || p > 1.0f )
 		throw std::invalid_argument("bernoulli probability p must be in [0, 1].");
 	Tensor t(shape);
-	std::random_device rd;
-	std::mt19937 gen(rd());
 	std::bernoulli_distribution d(p);
 	for ( int i = 0; i < t.size(); ++i )
-		t.data()[i] = d(gen) ? 1.0f : 0.0f;
+		t.data()[i] = d(random_generator()) ? 1.0f : 0.0f;
 	return t;
 }
 
 Tensor Tensor::uniform(const std::vector<int>& shape)
 {
 	Tensor t(shape);
-	std::random_device rd;
-	std::mt19937 gen(rd());
 	std::uniform_real_distribution<float> d(0.0f, 1.0f);
 	for ( int i = 0; i < t.size(); ++i )
-		t.data()[i] = d(gen);
+		t.data()[i] = d(random_generator());
 	return t;
+}
+
+void Tensor::manual_seed(uint64_t seed)
+{
+	random_generator().seed(static_cast<std::mt19937::result_type>(seed));
 }
 
 } // namespace core

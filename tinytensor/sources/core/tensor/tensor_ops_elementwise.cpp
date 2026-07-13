@@ -2,6 +2,11 @@
 #include "tensor.hpp"
 #include "tensor_detail.hpp"
 
+#include <algorithm>
+#include <cmath>
+#include <stdexcept>
+#include <vector>
+
 namespace tinytensor {
 namespace core {
 

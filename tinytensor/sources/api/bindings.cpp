@@ -4,12 +4,18 @@
 #include <pybind11/numpy.h>
 #include "tensor.hpp"
 
+#include <cstddef>
+#include <string>
+#include <vector>
+
 namespace py = pybind11;
 using namespace tinytensor::core;
 
 PYBIND11_MODULE(tinytensor, m)
 {
-	m.doc() = "CVMML: Computer Vision and Machine Learning Library C++ Engine";
+	m.doc() = "TinyMML tensor engine";
+	m.def("cuda_available", []() { return static_cast<bool>(TINYTENSOR_ENABLE_CUDA); });
+	m.def("manual_seed", &Tensor::manual_seed, py::arg("seed"));
 
 	py::enum_<Device>(m, "Device")
 		.value("CPU", Device::CPU)
@@ -72,6 +78,7 @@ PYBIND11_MODULE(tinytensor, m)
 		.def_static("randn", &Tensor::randn, py::arg("shape"), py::arg("mean")=0.0f, py::arg("std")=1.0f)
 		.def_static("bernoulli", &Tensor::bernoulli, py::arg("shape"), py::arg("p"))
 		.def_static("uniform", &Tensor::uniform, py::arg("shape"))
+		.def_static("manual_seed", &Tensor::manual_seed, py::arg("seed"))
 
 		.def("im2col", &Tensor::im2col, py::arg("kH"), py::arg("kW"), py::arg("stride")=1, py::arg("pad")=0)
 

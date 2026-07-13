@@ -1,5 +1,5 @@
-#ifndef CVMML_CORE_CUDA_KERNELS_COMMON_CUH
-#define CVMML_CORE_CUDA_KERNELS_COMMON_CUH
+#ifndef TINYTENSOR_CORE_CUDA_KERNELS_COMMON_CUH
+#define TINYTENSOR_CORE_CUDA_KERNELS_COMMON_CUH
 
 #include <cuda_runtime.h>
 #include <stdexcept>
@@ -31,4 +31,4 @@ inline void get_grid_1d(int size, dim3& blockSize, dim3& gridSize)
 } // namespace core
 } // namespace tinytensor
 
-#endif // CVMML_CORE_CUDA_KERNELS_COMMON_CUH
+#endif // TINYTENSOR_CORE_CUDA_KERNELS_COMMON_CUH

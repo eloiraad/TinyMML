@@ -2,7 +2,11 @@
 #include "tensor.hpp"
 #include "tensor_detail.hpp"
 
+#include <algorithm>
 #include <cstdint>
+#include <functional>
+#include <stdexcept>
+#include <vector>
 
 #ifdef _OPENMP
 #include <omp.h>
@@ -81,7 +85,7 @@ Tensor Tensor::matmult(const Tensor& rhs) const
 	}
 	else
 	{
-		const bool parallel_forward = should_parallel_matmul(batch_count, M, K, N);
+		[[maybe_unused]] const bool parallel_forward = should_parallel_matmul(batch_count, M, K, N);
 		for ( int64_t b = 0; b < batch_count; ++b )
 		{
 			std::vector<int> out_batch_idx = detail::unravel_index(b, out_batch_shape);
@@ -120,7 +124,7 @@ Tensor Tensor::matmult(const Tensor& rhs) const
 			int64_t lhs_matrix_size_local = static_cast<int64_t>(M) * K;
 			int64_t rhs_matrix_size_local = static_cast<int64_t>(K) * N;
 			int64_t out_matrix_size_local = static_cast<int64_t>(M) * N;
-			const bool parallel_backward = should_parallel_matmul(batch_count_local, M, K, N);
+			[[maybe_unused]] const bool parallel_backward = should_parallel_matmul(batch_count_local, M, K, N);
 
 			if ( parentA.requires_grad_ )
 			{
@@ -223,14 +227,15 @@ Tensor Tensor::transpose(int dim0, int dim1) const
 	if ( dim0 < 0 || dim0 >= rank || dim1 < 0 || dim1 >= rank || dim0 == dim1 )
 		throw std::invalid_argument("Invalid transpose dimensions.");
 
-	Tensor tr = *this;
+	Tensor tr(shape_);
+	tr.data_ = data_;
+	tr.device_ = device_;
+	tr.device_data_ = device_data_;
+	tr.offset_ = offset_;
+	tr.strides_ = strides_;
 	std::swap(tr.shape_[dim0], tr.shape_[dim1]);
 	std::swap(tr.strides_[dim0], tr.strides_[dim1]);
 	tr.is_view_ = true;
-	tr.grad_.reset();
-	tr.device_grad_.reset();
-	tr.parents_.clear();
-	tr.backward_fn_ = std::function<void(const Tensor&)>();
 
 	tr.set_requires_grad(this->requires_grad_);
 	if ( tr.requires_grad_ )
@@ -251,7 +256,7 @@ Tensor Tensor::transpose(int dim0, int dim1) const
 			}
 
 			int total = parent.size();
-			const bool parallel_bwd = total >= 100000;
+			[[maybe_unused]] const bool parallel_bwd = total >= 100000;
 			#ifdef _OPENMP
 			#pragma omp parallel for if(parallel_bwd)
 			#endif

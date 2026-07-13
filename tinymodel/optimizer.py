@@ -1,136 +1,126 @@
+"""Gradient-based optimizers for TinyMML parameters."""
+
 from abc import ABC, abstractmethod
-from typing import List, Optional
+
 import numpy as np
 import tinytensor as tt
 
+
+def _tensor_from(values: np.ndarray, device) -> tt.Tensor:
+    """Copy one float32 array into a tensor on the requested device."""
+    values = np.ascontiguousarray(values, dtype=np.float32)
+    tensor = tt.Tensor(list(values.shape))
+    np.asarray(tensor)[:] = values
+    return tensor.to_cuda() if device == tt.Device.CUDA else tensor
+
+
 class Optimizer(ABC):
-	"""
-	[brief] Classe de base abstraite pour tous les optimiseurs de gradients.
+    """Base optimizer holding trainable parameters and learning rate."""
 
-	[details]
-	Définit l'interface commune et stocke les paramètres à optimiser pour faciliter le polymorphisme.
-	Gère la liste des paramètres modifiables du modèle et fournit la méthode universelle `zero_grad()` pour effacer les gradients avant chaque itération d'entraînement.
+    def __init__(self, parameters: list, lr: float) -> None:
+        if lr <= 0.0:
+            raise ValueError("learning rate must be positive")
+        self.parameters = list(parameters)
+        self.lr = lr
 
-	Args:
-		parameters (List): Liste des objets `cvmml.Tensor` (paramètres du modèle).
-		lr (float): Taux d'apprentissage de base.
+    def zero_grad(self) -> None:
+        for parameter in self.parameters:
+            parameter.zero_grad()
 
-	Returns:
-		Aucun retour pour l'initialisation.
-	"""
-	def __init__(self, parameters: List, lr: float):
-		self.parameters = list(parameters)
-		self.lr = lr
-
-	def zero_grad(self):
-		for param in self.parameters:
-			param.zero_grad()
-
-	@abstractmethod
-	def step(self):
-		pass
+    @abstractmethod
+    def step(self) -> None:
+        """Update every parameter with an available gradient."""
 
 
 class SGD(Optimizer):
-	"""
-	[brief] Optimiseur par Descente de Gradient Stochastique (Stochastic Gradient Descent).
+    """Stochastic gradient descent with momentum and L2 weight decay."""
 
-	[details]
-	Met à jour les poids pour minimiser l'erreur selon la direction du gradient avec support de l'inertie (momentum).
-	Soustrait à chaque paramètre la valeur de son gradient (pondéré par `lr`). Utilise des arrays `numpy` internes pour calculer les inerties sans allouer de nouveaux Tensors. Les opérations de mise à jour s'effectuent via `.subtract_()` (in-place) pour rester sur le device (C++ / CUDA) et éviter l'explosion de l'autograd.
+    def __init__(
+        self,
+        parameters: list,
+        lr: float = 0.01,
+        momentum: float = 0.0,
+        weight_decay: float = 0.0,
+    ) -> None:
+        super().__init__(parameters, lr)
+        if not 0.0 <= momentum < 1.0:
+            raise ValueError("momentum must be in [0, 1)")
+        if weight_decay < 0.0:
+            raise ValueError("weight_decay must be non-negative")
+        self.momentum = momentum
+        self.weight_decay = weight_decay
+        self.velocities = [
+            np.zeros(parameter.shape(), dtype=np.float32)
+            for parameter in self.parameters
+        ]
 
-	Args:
-		parameters (List): Paramètres à optimiser.
-		lr (float): Taux d'apprentissage.
-		momentum (float): Constante d'inertie accélérant la descente dans les directions constantes.
-		weight_decay (float): Pénalité L2 pour régulariser les poids.
+    def step(self) -> None:
+        for index, parameter in enumerate(self.parameters):
+            gradient_buffer = parameter.grad()
+            if gradient_buffer is None:
+                continue
+            gradient = np.array(gradient_buffer, dtype=np.float32, copy=True)
+            if self.weight_decay:
+                gradient += self.weight_decay * np.asarray(parameter)
+            if self.momentum:
+                self.velocities[index] = (
+                    self.momentum * self.velocities[index] + gradient
+                )
+                gradient = self.velocities[index]
+            update = _tensor_from(gradient * self.lr, parameter.device())
+            parameter.subtract_(update)
 
-	Returns:
-		Aucun retour. `step()` met à jour les tenseurs en-place.
-	"""
-	def __init__(self, parameters: List, lr: float = 0.01, momentum: float = 0.0, weight_decay: float = 0.0):
-		super().__init__(parameters, lr)
-		self.momentum = momentum
-		self.weight_decay = weight_decay
-		self.velocities = []
-		for p in self.parameters:
-			self.velocities.append(np.zeros(p.shape(), dtype=np.float32))
-
-	def step(self):
-		for idx, param in enumerate(self.parameters):
-			grad = param.grad()
-			if grad is None:
-				continue
-
-			g = np.array(grad, dtype=np.float32, copy=False)
-			if self.weight_decay != 0.0:
-				g += self.weight_decay * np.asarray(param)
-			if self.momentum != 0.0:
-				self.velocities[idx] = self.momentum * self.velocities[idx] + g
-				g = self.velocities[idx]
-
-			grad_tensor = tt.Tensor(list(param.shape()))
-			np.asarray(grad_tensor)[:] = g.reshape(param.shape())
-			scaled = grad_tensor * self.lr
-			if param.device() == tt.Device.CUDA:
-				scaled = scaled.to_cuda()
-			param.subtract_(scaled)
 
 class Adam(Optimizer):
-	"""
-	[brief] Optimiseur Adaptive Moment Estimation (Adam).
+    """Adam optimizer with bias correction and L2 weight decay."""
 
-	[details]
-	Ajuste individuellement le taux d'apprentissage de chaque paramètre, offrant une convergence très rapide et robuste.
-	Calcule des estimations glissantes du premier moment (moyenne locale du gradient) et du second moment (variance locale non centrée), avec correction de biais selon l'itération `t`. Les buffers modifiés (arrays numpy) s'appliquent sur les `Tensor` in-place.
+    def __init__(
+        self,
+        parameters: list,
+        lr: float = 0.001,
+        beta1: float = 0.9,
+        beta2: float = 0.999,
+        eps: float = 1e-8,
+        weight_decay: float = 0.0,
+    ) -> None:
+        super().__init__(parameters, lr)
+        if not 0.0 <= beta1 < 1.0 or not 0.0 <= beta2 < 1.0:
+            raise ValueError("beta1 and beta2 must be in [0, 1)")
+        if eps <= 0.0 or weight_decay < 0.0:
+            raise ValueError("eps must be positive and weight_decay non-negative")
+        self.beta1 = beta1
+        self.beta2 = beta2
+        self.eps = eps
+        self.weight_decay = weight_decay
+        self.t = 0
+        self.m = [
+            np.zeros(parameter.shape(), dtype=np.float32)
+            for parameter in self.parameters
+        ]
+        self.v = [
+            np.zeros(parameter.shape(), dtype=np.float32)
+            for parameter in self.parameters
+        ]
 
-	Args:
-		parameters (List): Paramètres à optimiser.
-		lr (float): Taux d'apprentissage asymptotique maximum.
-		beta1 (float): Taux de décroissance pour le premier moment (momentum).
-		beta2 (float): Taux de décroissance pour le second moment (RMSprop).
-		eps (float): Terme de stabilité pour diviser sans erreur par zéro.
-		weight_decay (float): Pénalité de régularisation L2.
+    def step(self) -> None:
+        self.t += 1
+        for index, parameter in enumerate(self.parameters):
+            gradient_buffer = parameter.grad()
+            if gradient_buffer is None:
+                continue
+            gradient = np.array(gradient_buffer, dtype=np.float32, copy=True)
+            if self.weight_decay:
+                gradient += self.weight_decay * np.asarray(parameter)
 
-	Returns:
-		Aucun retour. `step()` met à jour les poids in-place.
-	"""
-	def __init__(self, parameters: List, lr: float = 0.001, beta1: float = 0.9, beta2: float = 0.999, eps: float = 1e-8, weight_decay: float = 0.0):
-		super().__init__(parameters, lr)
-		self.beta1 = beta1
-		self.beta2 = beta2
-		self.eps = eps
-		self.weight_decay = weight_decay
-		self.t = 0
-		self.m = []
-		self.v = []
-		for p in self.parameters:
-			self.m.append(np.zeros(p.shape(), dtype=np.float32))
-			self.v.append(np.zeros(p.shape(), dtype=np.float32))
-
-	def step(self):
-		self.t += 1
-		for idx, param in enumerate(self.parameters):
-			grad = param.grad()
-			if grad is None:
-				continue
-
-			g = np.array(grad, dtype=np.float32, copy=False)
-			if self.weight_decay != 0.0:
-				g += self.weight_decay * np.asarray(param)
-
-			self.m[idx] = self.beta1 * self.m[idx] + (1.0 - self.beta1) * g
-			self.v[idx] = self.beta2 * self.v[idx] + (1.0 - self.beta2) * (g ** 2)
-
-			m_hat = self.m[idx] / (1.0 - (self.beta1 ** self.t))
-			v_hat = self.v[idx] / (1.0 - (self.beta2 ** self.t))
-			
-			update = m_hat / (np.sqrt(v_hat) + self.eps)
-
-			grad_tensor = tt.Tensor(list(param.shape()))
-			np.asarray(grad_tensor)[:] = update.reshape(param.shape())
-
-			scaled = grad_tensor * self.lr
-			if param.device() == tt.Device.CUDA:
-				scaled = scaled.to_cuda()
-			param.subtract_(scaled)
+            self.m[index] = (
+                self.beta1 * self.m[index] + (1.0 - self.beta1) * gradient
+            )
+            self.v[index] = (
+                self.beta2 * self.v[index]
+                + (1.0 - self.beta2) * gradient * gradient
+            )
+            first_moment = self.m[index] / (1.0 - self.beta1**self.t)
+            second_moment = self.v[index] / (1.0 - self.beta2**self.t)
+            update_values = first_moment / (np.sqrt(second_moment) + self.eps)
+            update = _tensor_from(update_values * self.lr, parameter.device())
+            parameter.subtract_(update)

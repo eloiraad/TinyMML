@@ -5,6 +5,8 @@
 #include <cstdint>
 #include <limits>
 #include <memory>
+#include <stdexcept>
+#include <vector>
 
 #ifdef _OPENMP
 #include <omp.h>
@@ -47,7 +49,7 @@ Tensor Tensor::sum(const std::vector<int>& axes, bool keepdim) const
 	}
 	else
 	{
-		const bool parallel_sum = should_parallel_reduction(src_cont.size());
+		[[maybe_unused]] const bool parallel_sum = should_parallel_reduction(src_cont.size());
 		float* result_ptr = result.data();
 		const float* src_ptr = src_cont.data();
 		#ifdef _OPENMP
@@ -88,7 +90,7 @@ Tensor Tensor::sum(const std::vector<int>& axes, bool keepdim) const
 
 			float* grad_out = result.grad();
 			float* grad_parent = parent.grad();
-			const bool parallel_sum_bwd = should_parallel_reduction(parent.size());
+			[[maybe_unused]] const bool parallel_sum_bwd = should_parallel_reduction(parent.size());
 			#ifdef _OPENMP
 			#pragma omp parallel for if(parallel_sum_bwd)
 			#endif
@@ -137,7 +139,7 @@ Tensor Tensor::max(const std::vector<int>& axes, bool keepdim) const
 		argmax.assign(result.size(), -1);
 		for ( int i = 0; i < result.size(); ++i )
 			result.data()[i] = -std::numeric_limits<float>::infinity();
-		const bool parallel_max = should_parallel_reduction(src_cont.size());
+		[[maybe_unused]] const bool parallel_max = should_parallel_reduction(src_cont.size());
 
 		#ifdef _OPENMP
 		std::vector<omp_lock_t> locks(result.size());
@@ -195,7 +197,7 @@ Tensor Tensor::max(const std::vector<int>& axes, bool keepdim) const
 
 			float* grad_out = result.grad();
 			float* grad_parent = parent.grad();
-			const bool parallel_max_bwd = should_parallel_reduction(static_cast<int64_t>(argmax_local.size()));
+			[[maybe_unused]] const bool parallel_max_bwd = should_parallel_reduction(static_cast<int64_t>(argmax_local.size()));
 			#ifdef _OPENMP
 			#pragma omp parallel for if(parallel_max_bwd)
 			#endif
@@ -242,7 +244,7 @@ Tensor Tensor::min(const std::vector<int>& axes, bool keepdim) const
 		argmin.assign(result.size(), -1);
 		for ( int i = 0; i < result.size(); ++i )
 			result.data()[i] = std::numeric_limits<float>::infinity();
-		const bool parallel_min = should_parallel_reduction(src_cont.size());
+		[[maybe_unused]] const bool parallel_min = should_parallel_reduction(src_cont.size());
 
 		#ifdef _OPENMP
 		std::vector<omp_lock_t> locks(result.size());
@@ -300,7 +302,7 @@ Tensor Tensor::min(const std::vector<int>& axes, bool keepdim) const
 
 			float* grad_out = result.grad();
 			float* grad_parent = parent.grad();
-			const bool parallel_min_bwd = should_parallel_reduction(static_cast<int64_t>(argmin_local.size()));
+			[[maybe_unused]] const bool parallel_min_bwd = should_parallel_reduction(static_cast<int64_t>(argmin_local.size()));
 			#ifdef _OPENMP
 			#pragma omp parallel for if(parallel_min_bwd)
 			#endif

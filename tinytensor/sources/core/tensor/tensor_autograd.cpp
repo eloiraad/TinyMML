@@ -2,7 +2,9 @@
 #include "tensor.hpp"
 
 #include <functional>
+#include <memory>
 #include <set>
+#include <stdexcept>
 #include <vector>
 
 namespace tinytensor {

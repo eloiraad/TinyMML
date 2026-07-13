@@ -1,6 +1,11 @@
 #include "tensor.hpp"
 #include <cuda_runtime.h>
 
+#include <cstddef>
+#include <memory>
+#include <stdexcept>
+#include <string>
+
 #ifndef CHECK_CUDA
 #define CHECK_CUDA(call) { \
 	cudaError_t err = call; \

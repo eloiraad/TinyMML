@@ -1,10 +1,5 @@
-#ifndef CVMML_CORE_CUDA_KERNELS_CUH
-#define CVMML_CORE_CUDA_KERNELS_CUH
-
-#include <cuda_runtime.h>
-#include <stdexcept>
-#include <string>
-#include <math.h>
+#ifndef TINYTENSOR_CORE_CUDA_KERNELS_CUH
+#define TINYTENSOR_CORE_CUDA_KERNELS_CUH
 
 namespace tinytensor {
 namespace core {
@@ -68,4 +63,4 @@ void im2col(const float* data_im, float* data_col,
 } // namespace core
 } // namespace tinytensor
 
-#endif // CVMML_CORE_CUDA_KERNELS_CUH
+#endif // TINYTENSOR_CORE_CUDA_KERNELS_CUH

@@ -1,5 +1,5 @@
-#ifndef CVMML_CORE_TENSOR_DETAIL_HPP
-#define CVMML_CORE_TENSOR_DETAIL_HPP
+#ifndef TINYTENSOR_CORE_TENSOR_DETAIL_HPP
+#define TINYTENSOR_CORE_TENSOR_DETAIL_HPP
 
 #include "tensor.hpp"
 #include <cstdint>
@@ -28,4 +28,4 @@ void check_same_device(const Tensor& a, const Tensor& b);
 } // namespace core
 } // namespace tinytensor
 
-#endif // CVMML_CORE_TENSOR_DETAIL_HPP
+#endif // TINYTENSOR_CORE_TENSOR_DETAIL_HPP

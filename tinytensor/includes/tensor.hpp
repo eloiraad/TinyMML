@@ -1,16 +1,10 @@
-#ifndef CVMML_CORE_TENSOR_HPP
-#define CVMML_CORE_TENSOR_HPP
+#ifndef TINYTENSOR_CORE_TENSOR_HPP
+#define TINYTENSOR_CORE_TENSOR_HPP
 
-#include <vector>
-#include <memory>
-#include <stdexcept>
-#include <random>
+#include <cstdint>
 #include <functional>
-#include <set>
-#include <string>
-#include <atomic>
-#include <algorithm>
-#include <cmath>
+#include <memory>
+#include <vector>
 
 enum class Device
 {
@@ -27,8 +21,8 @@ class Tensor {
 		std::vector<int> strides_;
 		int offset_ = 0;
 		bool is_view_ = false;
-		std::shared_ptr<float[]> data_;
 
+		std::shared_ptr<float[]> data_;
 		Device device_ = Device::CPU;
 		std::shared_ptr<float[]> device_data_;
 
@@ -68,6 +62,7 @@ class Tensor {
 		static Tensor randn( const std::vector<int>& shape, float mean, float std );
 		static Tensor bernoulli( const std::vector<int>& shape, float p );
 		static Tensor uniform( const std::vector<int>& shape );
+		static void manual_seed( uint64_t seed );
 
 		Tensor operator+( const Tensor& rhs ) const;
 		Tensor operator-( const Tensor& rhs ) const;
@@ -107,4 +102,4 @@ class Tensor {
 } // namespace core
 } // namespace tinytensor
 
-#endif // CVMML_CORE_TENSOR_HPP
+#endif // TINYTENSOR_CORE_TENSOR_HPP

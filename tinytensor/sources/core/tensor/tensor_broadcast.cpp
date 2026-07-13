@@ -1,5 +1,9 @@
 #include "tensor_detail.hpp"
+
 #include <algorithm>
+#include <cstddef>
+#include <stdexcept>
+#include <vector>
 
 namespace tinytensor {
 namespace core {

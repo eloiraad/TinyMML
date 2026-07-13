@@ -118,3 +118,42 @@ Ce document trace la progression séquentielle du projet. Chaque étape doit êt
 *   [x] Split `sources/core/cuda_kernels.cu` en modules `cuda/` par responsabilité.
 *   [x] Conserver API publique `Tensor` stable tout en ajoutant `min`.
 *   [x] Reporter explicitement le multithreading CPU (décision produit) en attente de profiling.
+
+
+
+# TinyMML roadmap
+
+This roadmap distinguishes behavior validated on the reference CPU backend from experimental code that merely exists in the repository.
+
+## Validated now
+
+- [x] C++17 float32 tensors with owned storage, strides, views, and NumPy buffer interop.
+- [x] CPU broadcasting, elementwise operations, reductions, matrix multiplication, transpose, contiguous packing, and `im2col`.
+- [x] CPU autograd, including gradients through views, transposes, contiguous copies, and convolution lowering.
+- [x] Python layers: `Linear`, `Conv2D`, `Flatten`, `ReLU`, `Softmax`, dropout, normalization, and residual blocks.
+- [x] One-hot logits cross-entropy, MSE, SGD with momentum, and Adam.
+- [x] Mini-batch fit, evaluate, predict, metrics, weighted losses, validation, and deterministic seeding.
+- [x] Human-readable CPU verification with numerical gradient checks and end-to-end training.
+- [x] Executed CIFAR-10 CNN and Diabetes MLP comparison with Keras/TensorFlow CPU.
+- [x] Portable CPU-first CMake and shell build with optional OpenMP.
+
+## Experimental
+
+- [ ] Validate CUDA compilation and the existing elementwise, reduction, and matrix kernels on CUDA hardware.
+- [ ] Implement and verify CUDA backward parity for views, contiguous tensors, `im2col`, and Conv2D.
+- [ ] Add CUDA verification without weakening explicit errors in CPU-only builds.
+
+## Next
+
+- [ ] Profile CPU kernels before adding or expanding parallelism.
+- [ ] Add model state serialization and restoration.
+- [ ] Add a small data-loader abstraction without hiding NumPy interoperability.
+- [ ] Extend convolution options only when supported by gradient checks.
+- [ ] Add release packaging after the public API stabilizes.
+
+## Explicit non-goals today
+
+- No Metal backend.
+- No claim of CUDA training validation.
+- No claim that TinyMML should outperform optimized frameworks.
+- No open-source licensing claim; the repository currently has no license.
