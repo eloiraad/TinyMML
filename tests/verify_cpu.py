@@ -1,4 +1,4 @@
-"""Human-readable CPU verification for TinyMML.
+"""CPU verification for TinyMML.
 
 Run from repository root with ``.venv/bin/python python/verify_cpu.py``.
 Each section prints its purpose and raises immediately with useful context.
