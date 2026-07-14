@@ -1,8 +1,16 @@
 # TinyMML
 
-TinyMML is a compact neural-network framework built to make tensor operations, automatic differentiation, and model training readable end to end. A C++17 tensor engine is exposed through pybind11; a small Python layer supplies Keras-style layers, losses, optimizers, and training loops.
+TinyMML is a compact neural-network framework for learning how tensor operations, automatic differentiation, and model training fit together. Its C++17 tensor engine is exposed through pybind11, while the readable Python layer provides Keras-style layers, losses, optimizers, and training loops.
 
-The validated reference backend is macOS CPU. The repository includes a reproducible [CIFAR-10 and Diabetes showcase](notebooks/tinymml_showcase.ipynb) comparing TinyMML with Keras/TensorFlow on one CPU thread.
+The validated reference backend is macOS CPU. Three self-contained, executed notebooks compare equivalent TinyMML and Keras models on one CPU thread:
+
+| Notebook | Task | TinyMML model |
+| --- | --- | --- |
+| [MNIST MLP](notebooks/01_mnist_mlp.ipynb) | Handwritten-digit classification | MLP with He initialization and dropout |
+| [CIFAR-10 CNN](notebooks/02_cifar10_cnn.ipynb) | Natural-image classification | Two convolution blocks and a dropout MLP head |
+| [Diabetes MLP](notebooks/03_diabetes_mlp.ipynb) | Disease-progression regression | Dropout MLP with Adam weight decay |
+
+Each notebook includes data exploration, visualizations, matched TinyMML/Keras training, quality metrics, timing, prediction examples, and reproducible reduced/full/custom profiles.
 
 ## What works
 
@@ -13,11 +21,11 @@ The validated reference backend is macOS CPU. The repository includes a reproduc
 | Reductions and autograd | ✅ | Experimental | `sum`, `mean`, `min`, `max`, `var` |
 | Matrix multiplication and autograd | ✅ | Experimental | Batched matrix multiplication is supported |
 | Views, transpose, and contiguous gradients | ✅ | Partial | Unique graph nodes; strided CPU gradients validated |
-| `im2col` and `Conv2D` training | ✅ | Forward only | CUDA backward fails explicitly instead of dropping gradients |
-| High-level model training | ✅ | Untested | `Linear`, `Conv2D`, activations, normalization, losses, SGD, Adam |
+| `im2col` and `Conv2D` training | ✅ | Forward only | Unsupported CUDA backward paths fail explicitly |
+| Model training | ✅ | Untested | Linear, Conv2D, activations, dropout, losses, SGD, Adam |
 | Metal | — | — | No Metal backend |
 
-CUDA sources remain available behind a build option, but CUDA was not tested during this macOS refactor. CPU-only builds still expose `Device.CUDA`; calling `to_cuda()` explains how to rebuild with CUDA.
+CUDA sources remain available behind a build option, but were not tested during this macOS work. CPU-only builds still expose `Device.CUDA`; calling `to_cuda()` explains how to rebuild with CUDA.
 
 ## Quick start
 
@@ -27,7 +35,7 @@ Requirements: Python 3.13, a C++17 compiler, and a POSIX shell.
 python3.13 -m venv .venv
 .venv/bin/python -m pip install -r requirements.txt
 ./build.sh --clean
-.venv/bin/python python/verify_cpu.py
+.venv/bin/python tests/verify_cpu.py
 ```
 
 Build options:
@@ -69,22 +77,21 @@ y = (2 * x[:, :1] - x[:, 1:2]).astype("float32")
 model = tm.Model([
     tm.Linear(32, init="he"),
     tm.ReLU(),
+    tm.Dropout(0.1),
     tm.Linear(1),
 ])
 model.build(list(x.shape))
-
-history = model.fit(
+model.fit(
     x,
     y,
     epochs=50,
     batch_size=16,
     optimizer=tm.Adam(model.parameters(), lr=1e-2),
     loss_fn=tm.MSELoss(),
-    verbose=True,
 )
 ```
 
-`Conv2D` inputs use NCHW layout (`[batch, channels, height, width]`). `CrossEntropyLoss` accepts logits and one-hot targets with shape `[batch, classes]`.
+`Conv2D` uses NCHW input layout (`[batch, channels, height, width]`). `CrossEntropyLoss` accepts logits and one-hot targets shaped `[batch, classes]`.
 
 ## Architecture
 
@@ -92,52 +99,83 @@ history = model.fit(
 flowchart TD
     A["Python user code"] --> B["tinymodel: layers, losses, optimizers, Model"]
     B --> C["tinytensor pybind11 module"]
-    C --> D["C++ Tensor + autograd graph"]
+    C --> D["C++ Tensor and autograd graph"]
     D --> E["Validated CPU kernels"]
     D --> F["Optional CUDA kernels"]
 ```
 
 - `tinytensor/includes/`: public tensor and CUDA declarations.
-- `tinytensor/sources/core/tensor/`: CPU storage, broadcasting, operations, and autograd.
+- `tinytensor/sources/core/tensor/`: CPU storage, operations, and autograd.
 - `tinytensor/sources/core/cuda/`: optional CUDA implementation and CPU-build stubs.
 - `tinytensor/sources/api/`: Python bindings.
-- `tinymodel/`: readable high-level neural-network API.
-- `python/verify_cpu.py`: reproducible named diagnostic checks, designed for interactive debugging rather than pytest.
+- `tinymodel/`: high-level layers, losses, optimizers, and model loop.
+- `tests/verify_cpu.py`: named, human-readable diagnostic checks; no pytest required.
 
-## Reproducible showcase
+## Run the notebooks
 
-Install demo dependencies and execute the committed quick profile:
+Install the notebook dependencies after building TinyMML:
 
 ```bash
-.venv/bin/python -m pip install -r requirements-demo.txt
-.venv/bin/jupyter nbconvert \
-  --to notebook --execute notebooks/tinymml_showcase.ipynb --inplace \
+.venv/bin/python -m pip install -r requirements-notebooks.txt
+```
+
+Execute the committed reduced profiles:
+
+```bash
+TINYMML_PROFILE=reduced .venv/bin/jupyter nbconvert \
+  --to notebook --execute notebooks/01_mnist_mlp.ipynb --inplace \
+  --ExecutePreprocessor.timeout=1200
+
+TINYMML_PROFILE=reduced .venv/bin/jupyter nbconvert \
+  --to notebook --execute notebooks/02_cifar10_cnn.ipynb --inplace \
+  --ExecutePreprocessor.timeout=1200
+
+TINYMML_PROFILE=reduced .venv/bin/jupyter nbconvert \
+  --to notebook --execute notebooks/03_diabetes_mlp.ipynb --inplace \
   --ExecutePreprocessor.timeout=1200
 ```
 
-Use `TINYMML_PROFILE=full` for 10,000/2,000 CIFAR-10 samples, five CIFAR epochs, 300 Diabetes epochs, and ten inference repeats. CIFAR-10 is downloaded as verified Hugging Face parquet shards and cached under ignored `data/`.
+Set `TINYMML_PROFILE=full` to use the complete official datasets and longer training schedules. To experiment, edit `CUSTOM_CONFIG` in the first code cell and set `TINYMML_PROFILE=custom`. Every profile is validated before data loading or training.
 
-### Executed quick-profile results
+| Profile | MNIST | CIFAR-10 | Diabetes |
+| --- | --- | --- | --- |
+| Reduced, committed | 3,000/500, 5 epochs | 1,000/250, 3 epochs | 250/60, 150 epochs |
+| Full | 60,000/10,000, 10 epochs | 50,000/10,000, 5 epochs | 353/89, 300 epochs |
 
-Measured on an arm64 Mac with 8 logical CPUs, macOS 26.5.1, Python 3.13.14, NumPy 2.4.3, TensorFlow 2.21.0, Keras 3.15.0, and scikit-learn 1.9.0. TensorFlow reported no visible GPU. Both libraries were restricted to one CPU thread and seeded with 42.
+CIFAR-10 uses SHA-256-verified Hugging Face parquet shards cached under ignored `data/`. MNIST uses the Keras dataset cache. Downloads and preprocessing are excluded from training measurements.
 
-The initial 2,000/500 CIFAR profile exceeded ten minutes because the default Keras dataset host was unavailable inside the restricted environment. Per the benchmark policy, the committed run records the fallback profile: 1,000 train samples, 250 test samples, three epochs, batch size 32, and five inference repeats.
+## Executed reduced-profile results
 
-| CIFAR-10 | Accuracy | Training (s) | Median inference (ms) | Samples/s |
-| --- | ---: | ---: | ---: | ---: |
-| TinyMML | 0.220 | 6.36 | 79.77 | 3,133.9 |
-| Keras | 0.276 | 1.28 | 10.32 | 24,225.0 |
+Measured on an arm64 Mac with 8 logical CPUs, macOS 26.5.1, Python 3.13.14, NumPy 2.4.3, TensorFlow 2.21.0, Keras 3.15.0, and scikit-learn 1.9.0. TensorFlow reported no visible GPU. Both libraries used one CPU thread and seed 42.
 
-| Diabetes | MAE | RMSE | R² | Training (s) | Median inference (ms) | Samples/s |
+| MNIST | Test loss | Accuracy | Macro F1 | Training (s) | Inference (ms) | Samples/s |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| TinyMML | 53.53 | 69.95 | 0.076 | 1.50 | 0.406 | 219,121.7 |
-| Keras | 50.49 | 70.31 | 0.067 | 4.91 | 1.828 | 48,699.3 |
+| TinyMML | 0.3085 | 0.912 | 0.911 | 5.40 | 87.06 | 5,743.1 |
+| Keras | 0.3190 | 0.904 | 0.903 | 1.19 | 35.14 | 14,230.2 |
 
-The Diabetes train-mean MAE baseline was 64.01. Timings exclude downloads, preprocessing, and model construction; include complete `fit()` calls; warm inference once; and report the median. TinyMML is educational software, while TensorFlow is highly optimized, so the benchmark has no speed-win assertion.
+| CIFAR-10 | Test loss | Accuracy | Macro F1 | Training (s) | Inference (ms) | Samples/s |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| TinyMML | 2.2212 | 0.152 | 0.106 | 17.05 | 254.15 | 983.7 |
+| Keras | 2.1089 | 0.232 | 0.134 | 1.66 | 52.37 | 4,774.1 |
+
+| Diabetes | MAE | RMSE | R² | Training (s) | Inference (ms) | Samples/s |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| TinyMML | 49.56 | 62.54 | 0.311 | 1.99 | 0.502 | 119,601.2 |
+| Keras | 49.88 | 61.88 | 0.326 | 3.19 | 30.810 | 1,947.4 |
+
+The Diabetes train-mean MAE baseline is 66.26. Both models beat it and achieve positive R².
+
+Training timing excludes downloads, preprocessing, and model construction, but includes the complete `fit()` call. Inference is warmed once and reports the median over the configured repeats. The notebooks compare measurements without asserting that TinyMML must outperform Keras.
+
+## Notebook contents
+
+- MNIST explores shape, pixel range, class balance, and one image per digit, then shows learning curves, normalized confusion matrices, and fixed prediction decisions with confidence.
+- CIFAR-10 explores class balance and pixel statistics, visualizes every class, discloses TinyMML NCHW versus Keras NHWC, and reports the same classification diagnostics.
+- Diabetes reports missing values, target and feature distributions, a correlation heatmap, the train-mean baseline, predicted-versus-actual plots, residuals, and largest errors. Feature and target scalers fit training data only.
 
 ## Verification coverage
 
-`python/verify_cpu.py` prints a named PASS/FAIL section and exits nonzero on failure. It covers:
+`tests/verify_cpu.py` prints named PASS/FAIL sections and exits nonzero on failure. It covers:
 
 - tensor creation, NumPy interop, broadcasting, reductions, matrix multiplication, transpose, views, contiguous copies, and convolution lowering;
 - deterministic finite-difference gradients for core operations, views, transpose, contiguous copies, and `im2col`;
@@ -152,10 +190,10 @@ The Diabetes train-mean MAE baseline was 64.01. Timings exclude downloads, prepr
 - There is no Metal backend, serialization format, data-loader abstraction, or production deployment tooling.
 - The tensor engine uses float32 only and prioritizes clarity over optimized kernels.
 
-See [RoadMap.md](RoadMap.md) for verified milestones and next work.
+See [RoadMap.md](RoadMap.md) for project milestones and future work.
 
 ## Contributing
 
-Keep public `tinytensor` and `tinymodel` APIs stable, add readable checks to `python/verify_cpu.py`, run the full verification sequence, and document benchmark methodology changes. Avoid silently accepting unsupported backend behavior.
+Keep the public `tinytensor` and `tinymodel` APIs stable, add readable checks to `tests/verify_cpu.py`, run the full verification sequence, and document benchmark methodology changes. Avoid silently accepting unsupported backend behavior.
 
 This repository currently has **no open-source license**. Source availability does not grant permission to use, modify, or redistribute it; contact the repository owner before contributing or reusing the code.

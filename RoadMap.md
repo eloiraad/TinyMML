@@ -112,6 +112,10 @@ Ce document trace la progression séquentielle du projet. Chaque étape doit êt
 
 ---
 
+Multithreading CPU ?
+
+
+
 ### Notes de structure (refactor global)
 
 *   [x] Split `sources/core/tensor.cpp` en modules `tensor/` par responsabilité.
