@@ -1,6 +1,6 @@
 """CPU verification for TinyMML.
 
-Run from repository root with ``.venv/bin/python python/verify_cpu.py``.
+Run from repository root with ``.venv/bin/python tests/verify_cpu.py``.
 Each section prints its purpose and raises immediately with useful context.
 """
 
