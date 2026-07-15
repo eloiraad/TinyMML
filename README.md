@@ -1,31 +1,26 @@
 # TinyMML
 
-TinyMML is a compact neural-network framework for learning how tensor operations, automatic differentiation, and model training fit together. Its C++17 tensor engine is exposed through pybind11, while the readable Python layer provides Keras-style layers, losses, optimizers, and training loops.
+TinyMML is a compact neural-network framework built to make tensor operations, automatic differentiation, and model training understandable end to end. A C++17 tensor engine provides the numerical core through pybind11, while a readable Python layer exposes Keras-style layers, losses, optimizers, and training loops.
 
-The validated reference backend is macOS CPU. Three self-contained teaching notebooks compare equivalent TinyMML and Keras models. They disable GPU execution, leave CPU thread selection to the runtimes, and are committed without generated outputs:
+Its notebooks compare equivalent TinyMML and Keras models without hiding preprocessing, tensor layouts, metrics, or timing methodology.
 
-| Notebook | Task | TinyMML model |
-| --- | --- | --- |
-| [MNIST MLP](notebooks/01_mnist_mlp.ipynb) | Handwritten-digit classification | MLP with He initialization and dropout |
-| [CIFAR-10 CNN](notebooks/02_cifar10_cnn.ipynb) | Natural-image classification | Two convolution blocks and a dropout MLP head |
-| [Diabetes MLP](notebooks/03_diabetes_mlp.ipynb) | Disease-progression regression | Dropout MLP with Adam weight decay |
+## See it work
 
-Each notebook includes a dataset explanation, data exploration, visualizations, matched TinyMML/Keras training, quality metrics, timing, and prediction examples. A visible `PROFILE` variable selects the reproducible reduced or full configuration.
+| MNIST digit decisions | CIFAR-10 image decisions |
+| --- | --- |
+| ![MNIST predictions from TinyMML and Keras](assets/classification_decision_MNIST.png) | ![CIFAR-10 predictions from TinyMML and Keras](assets/classification_decision_CIFAR.png) |
 
-## What works
+![Diabetes regression training, predictions, and residual diagnostics](assets/inference_diabetes.png)
 
-| Area | CPU | CUDA | Notes |
-| --- | :---: | :---: | --- |
-| Tensor creation and NumPy buffer interop | ✅ | Experimental | CPU NumPy access is zero-copy |
-| Broadcasting and elementwise autograd | ✅ | Experimental | `+`, `-`, `*`, `/`, `exp`, `log`, `relu`, `sqrt` |
-| Reductions and autograd | ✅ | Experimental | `sum`, `mean`, `min`, `max`, `var` |
-| Matrix multiplication and autograd | ✅ | Experimental | Batched matrix multiplication is supported |
-| Views, transpose, and contiguous gradients | ✅ | Partial | Unique graph nodes; strided CPU gradients validated |
-| `im2col` and `Conv2D` training | ✅ | Forward only | Unsupported CUDA backward paths fail explicitly |
-| Model training | ✅ | Untested | Linear, Conv2D, activations, dropout, losses, SGD, Adam |
-| Metal | — | — | No Metal backend |
+The classification grids compare individual TinyMML and Keras decisions. The regression diagnostic shows learning curves, predicted progression scores, and residual distributions from the fixed reference configuration.
 
-CUDA sources remain available behind a build option, but were not tested during this macOS work. CPU-only builds still expose `Device.CUDA`; calling `to_cuda()` explains how to rebuild with CUDA.
+## Technical highlights
+
+- C++ tensors with NumPy buffer interoperability and reverse-mode automatic differentiation.
+- Broadcasting, reductions, matrix multiplication, views, transpose, contiguous copies, and convolution lowering.
+- Trainable `Linear` and `Conv2D` layers with activations, dropout, SGD, Adam, and common losses.
+- Matched TinyMML/Keras notebooks for classification, convolution, and regression.
+- Named CPU verification checks covering numerical behavior, gradients, training, and error handling.
 
 ## Quick start
 
@@ -38,60 +33,22 @@ python3.13 -m venv .venv
 .venv/bin/python tests/verify_cpu.py
 ```
 
-Build options:
+`./build.sh` creates a CPU Release build. Use `--debug`, `--clean`, or `--cuda` for the corresponding build variants. OpenMP is optional; CMake reports whether it is available and otherwise builds a single-thread fallback.
 
-```bash
-./build.sh             # CPU Release; keep the build directory
-./build.sh --debug     # CPU Debug
-./build.sh --clean     # clean CPU Release
-./build.sh --cuda      # require a detected CUDA compiler
-```
+## Notebooks
 
-OpenMP is optional. CMake reports whether it was found and otherwise builds a clean single-thread fallback.
+The notebooks are generated with outputs. Set the `PROFILE` variable to `"reduced"` for a quick run or `"full"` for the complete run.
 
-## Tensor example
+| Notebook | Dataset/Goal | Model |
+| --- | --- | --- |
+| [MNIST MLP](notebooks/mnist_mlp.ipynb) | Classify 28 × 28 grayscale digits | Small `32 → 16 → 10` MLP |
+| [CIFAR-10 CNN](notebooks/cifar10_cnn.ipynb) | Classify 32 × 32 RGB images across ten classes | Two convolution blocks and a dense head |
+| [Diabetes regression](notebooks/diabetes_mlp.ipynb) | Estimate disease progression one year after baseline | Linear reference plus `100 → 100` MLP |
 
-```python
-import numpy as np
-import tinytensor as tt
-
-tt.manual_seed(42)
-x = tt.Tensor([2, 2])
-np.asarray(x)[:] = [[1.0, 2.0], [3.0, 4.0]]
-x.set_requires_grad(True)
-
-loss = (x * x).mean([0, 1], False)
-loss.backward()
-print(np.asarray(x), x.grad())
-```
-
-## Model example
-
-```python
-import numpy as np
-import tinymodel as tm
-
-x = np.random.default_rng(42).normal(size=(64, 10)).astype("float32")
-y = (2 * x[:, :1] - x[:, 1:2]).astype("float32")
-
-model = tm.Model([
-    tm.Linear(32, init="he"),
-    tm.ReLU(),
-    tm.Dropout(0.1),
-    tm.Linear(1),
-])
-model.build(list(x.shape))
-model.fit(
-    x,
-    y,
-    epochs=50,
-    batch_size=16,
-    optimizer=tm.Adam(model.parameters(), lr=1e-2),
-    loss_fn=tm.MSELoss(),
-)
-```
-
-`Conv2D` uses NCHW input layout (`[batch, channels, height, width]`). `CrossEntropyLoss` accepts logits and one-hot targets shaped `[batch, classes]`.
+| Profile | MNIST | CIFAR-10 | Diabetes |
+| --- | --- | --- | --- |
+| Reduced, default | 3,000/500, 5 epochs | 1,000/250, 3 epochs | 250/60, 150 epochs |
+| Full | 60,000/10,000, 10 epochs | 50,000/10,000, 10 epochs | 353/89, 500 epochs |
 
 ## Architecture
 
@@ -101,77 +58,30 @@ flowchart TD
     B --> C["tinytensor pybind11 module"]
     C --> D["C++ Tensor and autograd graph"]
     D --> E["Validated CPU kernels"]
-    D --> F["Optional CUDA kernels"]
+    D --> F["Experimental CUDA kernels"]
 ```
 
-- `tinytensor/includes/`: public tensor and CUDA declarations.
-- `tinytensor/sources/core/tensor/`: CPU storage, operations, and autograd.
-- `tinytensor/sources/core/cuda/`: optional CUDA implementation and CPU-build stubs.
-- `tinytensor/sources/api/`: Python bindings.
-- `tinymodel/`: high-level layers, losses, optimizers, and model loop.
-- `tests/verify_cpu.py`: named, human-readable diagnostic checks; no pytest required.
+- `tinytensor/` contains tensor storage, operations, autograd, CPU/CUDA kernels, and Python bindings.
+- `tinymodel/` contains the readable high-level training API.
+- `notebooks/` contains the three framework comparisons.
+- `tests/verify_cpu.py` contains the standalone CPU verification suite.
 
-## Run the notebooks
+## Benchmark
 
-Install the project dependencies and build TinyMML before opening the notebooks:
+The notebooks disable GPU execution but do not force OpenMP, BLAS, or TensorFlow thread counts. Each runtime uses automatic CPU parallelism, so timings remain hardware-dependent.
 
-```bash
-.venv/bin/python -m pip install -r requirements.txt
-./build.sh
-```
+Training measurements include the complete `fit()` call but exclude downloads, preprocessing, and model construction. Inference is warmed once and reports the median of several runs.
 
-Each notebook defaults to `PROFILE = "reduced"`. Change that visible variable to `"full"` to use the complete dataset and longer training schedule.
+Keras can be substantially faster because TensorFlow uses mature, optimized, and fused CPU kernels. TinyMML deliberately keeps its educational kernels and training flow explicit.
 
-To verify all notebooks without adding outputs to the tracked templates, execute copies in a temporary directory:
+## Current scope
 
-```bash
-mkdir -p /tmp/tinymml-notebooks
-MPLCONFIGDIR=/tmp/matplotlib-cache .venv/bin/jupyter nbconvert \
-  --to notebook --execute notebooks/*.ipynb \
-  --output-dir /tmp/tinymml-notebooks \
-  --ExecutePreprocessor.timeout=1200
-```
+| Area | Status |
+| --- | --- |
+| CPU tensor operations and autograd | Validated |
+| Dense and convolutional model training | Validated on CPU |
+| NumPy interoperability | Validated; CPU access is zero-copy |
+| CUDA | Experimental; CNN backward paths remain incomplete |
+| Metal, serialization, deployment tooling | Not implemented |
 
-| Profile | MNIST | CIFAR-10 | Diabetes |
-| --- | --- | --- | --- |
-| Reduced, default | 3,000/500, 5 epochs | 1,000/250, 3 epochs | 250/60, 150 epochs |
-| Full | 60,000/10,000, 10 epochs | 50,000/10,000, 5 epochs | 353/89, 300 epochs |
-
-CIFAR-10 uses SHA-256-verified Hugging Face parquet shards cached under ignored `data/`. MNIST uses the Keras dataset cache. Downloads and preprocessing are excluded from training measurements.
-
-## Benchmark interpretation
-
-The notebooks disable GPU execution but do not force OpenMP, BLAS, or TensorFlow thread counts. Each runtime selects available CPU parallelism for the current machine, so timing results are hardware-dependent.
-
-Training timing excludes downloads, preprocessing, and model construction, but includes the complete `fit()` call. Inference is warmed once and reports the median over the configured repeats. Keras uses optimized TensorFlow kernels, while TinyMML prioritizes readable educational implementations; the comparison reports observed performance without asserting runtime parity.
-
-## Notebook contents
-
-- MNIST explores shape, pixel range, class balance, and one image per digit, then shows learning curves, normalized confusion matrices, and fixed prediction decisions with confidence.
-- CIFAR-10 explores class balance and pixel statistics, visualizes every class, discloses TinyMML NCHW versus Keras NHWC, and reports the same classification diagnostics.
-- Diabetes reports missing values, target and feature distributions, a correlation heatmap, the train-mean baseline, predicted-versus-actual plots, residuals, and largest errors. Feature and target scalers fit training data only.
-
-## Verification coverage
-
-`tests/verify_cpu.py` prints named PASS/FAIL sections and exits nonzero on failure. It covers:
-
-- tensor creation, NumPy interop, broadcasting, reductions, matrix multiplication, transpose, views, contiguous copies, and convolution lowering;
-- deterministic finite-difference gradients for core operations, views, transpose, contiguous copies, and `im2col`;
-- layer shapes, Conv2D input/weight gradients, and a weight-update smoke test;
-- human-readable classification and regression convergence checks;
-- CPU-only CUDA diagnostics and invalid public inputs.
-
-## Limitations and roadmap
-
-- CPU is the only validated backend.
-- CUDA compilation and training were not tested on this Mac; CUDA CNN backward is incomplete.
-- There is no Metal backend, serialization format, data-loader abstraction, or production deployment tooling.
-- The tensor engine uses float32 only and prioritizes clarity over optimized kernels.
-
-See [RoadMap.md](RoadMap.md) for project milestones and future work.
-
-## Contributing
-
-Keep the public `tinytensor` and `tinymodel` APIs stable, add readable checks to `tests/verify_cpu.py`, run the full verification sequence, and document benchmark methodology changes. Avoid silently accepting unsupported backend behavior.
-
-This repository currently has **no open-source license**. Source availability does not grant permission to use, modify, or redistribute it; contact the repository owner before contributing or reusing the code.
+TinyMML currently uses float32 and prioritizes clarity over production-level kernel optimization.
